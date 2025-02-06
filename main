@@ -6,13 +6,13 @@ import random
 class Snake:
     def __init__(self):
         self.__length = 1
-        self.__positions = [((Settings.screen_width/2), (Settings.screen_height/2))]
+        self.__positions = [((Settings.screen_width / 2), (Settings.screen_height / 2))]
         self.__direction = random.choice(Settings.directions)
         self.__color = (17, 24, 47)
         self.__score = 0
 
     def turn(self, new_direction):
-        if (new_direction[0]*-1, new_direction[1]*-1) != self.__direction:  # cannot do a 180
+        if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:  # cannot do a 180
             self.__direction = new_direction
 
     def move(self):
@@ -35,7 +35,7 @@ class Snake:
 
     def reset(self):
         self.reset_length()
-        self.__positions = [((Settings.screen_width/2), (Settings.screen_height/2))]
+        self.__positions = [((Settings.screen_width / 2), (Settings.screen_height / 2))]
         self.__direction = random.choice(Settings.directions)
         self.__score = 0
 
@@ -70,13 +70,14 @@ class Food:
         return self.__position
 
     def randomize_position(self):
-        self.__position = (random.randint(0, int(Settings.grid_width)-1) * Settings.grid_size,
+        self.__position = (random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
                            random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
 
     def draw(self, surface):
         r = pygame.Rect((self.__position[0], self.__position[1]), (Settings.grid_size, Settings.grid_size))
         pygame.draw.rect(surface, (255, 0, 0), r)
         pygame.draw.rect(surface, (93, 216, 228), r, 1)
+
 
 class Fakefood:
     def __init__(self):
@@ -87,7 +88,7 @@ class Fakefood:
         return self.__position
 
     def randomize_position(self):
-        self.__position = (random.randint(0, int(Settings.grid_width)-1) * Settings.grid_size,
+        self.__position = (random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
                            random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
 
     def draw(self, surface):
@@ -127,17 +128,14 @@ class SnakeGame:
         self.__fakefood = Fakefood()
         self.__food = Food()
 
-
         self.__my_font = pygame.font.SysFont("monospace", 16)
-
-
 
     def __draw_grid(self, surface):
         for y in range(0, int(Settings.grid_height)):
             for x in range(0, int(Settings.grid_width)):
                 r = pygame.Rect((x * Settings.grid_size, y * Settings.grid_size),
                                 (Settings.grid_size, Settings.grid_size))
-                color = (93, 216, 228) if (x+y) % 2 == 0 else (84, 194, 205)
+                color = (93, 216, 228) if (x + y) % 2 == 0 else (84, 194, 205)
                 pygame.draw.rect(surface, color, r)
 
     def __quit_game(self):
@@ -158,7 +156,6 @@ class SnakeGame:
                 elif event.key == pygame.K_RIGHT:
                     self.__snake.turn(Settings.right)
 
-
     def __check_snake_food_collision(self):
         if self.__snake.get_head_position() == self.__food.get_position():
             self.__snake.increase_length()
@@ -166,7 +163,7 @@ class SnakeGame:
             self.__number_of_devoured_foods += 1
             self.__food.randomize_position()
             self.__fakefood.randomize_position()
-            
+
     def __check_snake_fakefood_collision(self):
         if self.__snake.get_head_position() == self.__food.get_position():
             self.__snake.increase_length()
@@ -178,8 +175,7 @@ class SnakeGame:
     def __draw_objects(self):
         self.__snake.draw(self.__surface)
         self.__food.draw(self.__surface)
-        self.
-
+        self.__fakefood.draw(self.__surface)
 
     def __update_screen(self):
         self.__screen.blit(self.__surface, (0, 0))
