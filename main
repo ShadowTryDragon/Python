@@ -86,25 +86,24 @@ class Food:
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
 
-class FakeApple(Food):
-    def __init__(self, count=1):
-        super().__init__(count, color=(0, 0, 255))
-
-    def actionfake(self, snake):
-        snake.increase_length()
-        snake.increase_length()
-        snake.increase_length()
-
-
 class Apple(Food):
-    def __init__(self, count=2, ):
+    def __init__(self, count=2):
         super().__init__(count, color=(255, 0, 0))
 
     def action(self, snake):
         snake.increase_length()
-        self.__snake.increase_score(0)
+        snake.increase_score(1)  # Apfel gibt 2 Punkte
 
 
+class FakeApple(Food):
+    def __init__(self, count=1):
+        super().__init__(count, color=(0, 0, 255))
+
+    def action(self, snake):
+        snake.increase_length()
+        snake.increase_length()
+        snake.increase_length()
+        snake.increase_score(0)  # Fake-Apfel gibt 3 Punkte
 
 
 
@@ -140,11 +139,12 @@ class SnakeGame:
         head_pos = self.__snake.get_head_position()
 
         if head_pos in self.__apple.get_positions():
-            self.__snake.increase_length()
+            self.__apple.action(self.__snake)
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+
         elif head_pos in self.__fakeapple.get_positions():
-            self.__fakeapple.actionfake(self.__snake)
+            self.__fakeapple.action(self.__snake)  
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
 
