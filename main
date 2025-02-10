@@ -55,46 +55,58 @@ class Snake:
         self.__score = 0
 
     def draw(self, surface):
+        for index, pos in enumerate(self.__positions):
+                    r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+                    if index == 0:  # Kopf der Schlange
+                        pygame.draw.rect(surface, (0, 255,0 ), r)  # Rote Farbe für den Kopf
+                    else:
+                        pygame.draw.rect(surface, self.__color, r)  # Normale Farbe für den Körper
+                    pygame.draw.rect(surface, (93, 216, 228), r, 1)  # Rand für alle Teile
+
+
+class Food:
+    def __init__(self, count=3, color =(0,0,0)):
+        self.__positions = []
+        self.__count = count
+        self.__color = color
+        self.randomize_positions()
+
+    def get_positions(self):
+        return self.__positions
+
+    def randomize_positions(self):
+        self.__positions = [(random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
+                             random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
+                            for _ in range(self.__count)]
+
+    def draw(self, surface):
         for pos in self.__positions:
             r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
             pygame.draw.rect(surface, self.__color, r)
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
 
-class Food:
-    def __init__(self):
-        self.__position = (0, 0)
-        self.randomize_position()
+class FakeApple(Food):
+    def __init__(self, count=1):
+        super().__init__(count, color=(0, 0, 255))
 
-    def get_position(self):
-        return self.__position
-
-    def randomize_position(self):
-        self.__position = (random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
-                           random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
-
-    def draw(self, surface):
-        r = pygame.Rect((self.__position[0], self.__position[1]), (Settings.grid_size, Settings.grid_size))
-        pygame.draw.rect(surface, (255, 0, 0), r)
-        pygame.draw.rect(surface, (93, 216, 228), r, 1)
+    def actionfake(self, snake):
+        snake.increase_length()
+        snake.increase_length()
+        snake.increase_length()
 
 
-class Fakefood:
-    def __init__(self):
-        self.__position = (0, 0)
-        self.randomize_position()
+class Apple(Food):
+    def __init__(self, count=2, ):
+        super().__init__(count, color=(255, 0, 0))
 
-    def get_position(self):
-        return self.__position
+    def action(self, snake):
+        snake.increase_length()
+        self.__snake.increase_score(0)
 
-    def randomize_position(self):
-        self.__position = (random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
-                           random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
 
-    def draw(self, surface):
-        r = pygame.Rect((self.__position[0], self.__position[1]), (Settings.grid_size, Settings.grid_size))
-        pygame.draw.rect(surface, (255, 0, 0), r)
-        pygame.draw.rect(surface, (93, 216, 228), r, 1)
+
+
 
 
 class Settings:
@@ -116,19 +128,25 @@ class Settings:
 class SnakeGame:
     def __init__(self):
         pygame.init()
-
         self.__clock = pygame.time.Clock()
         self.__screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height), 0, 32)
-        self.__surface = pygame.Surface(self.__screen.get_size())
-        self.__surface = self.__surface.convert()
-
-        self.__draw_grid(self.__surface)
-        self.__number_of_devoured_foods = 0
+        self.__surface = pygame.Surface(self.__screen.get_size()).convert()
         self.__snake = Snake()
-        self.__fakefood = Fakefood()
-        self.__food = Food()
-
+        self.__apple = Apple(count=3)
+        self.__fakeapple = FakeApple(count=2)
         self.__my_font = pygame.font.SysFont("monospace", 16)
+
+    def __check_collisions(self):
+        head_pos = self.__snake.get_head_position()
+
+        if head_pos in self.__apple.get_positions():
+            self.__snake.increase_length()
+            self.__apple.randomize_positions()
+            self.__fakeapple.randomize_positions()
+        elif head_pos in self.__fakeapple.get_positions():
+            self.__fakeapple.actionfake(self.__snake)
+            self.__apple.randomize_positions()
+            self.__fakeapple.randomize_positions()
 
     def __draw_grid(self, surface):
         for y in range(0, int(Settings.grid_height)):
@@ -155,27 +173,16 @@ class SnakeGame:
                     self.__snake.turn(Settings.left)
                 elif event.key == pygame.K_RIGHT:
                     self.__snake.turn(Settings.right)
+                elif event.key == pygame.K_ESCAPE:
+                    self.__quit_game()
+                elif event.key == pygame.K_q:
+                    self.__quit_game()
 
-    def __check_snake_food_collision(self):
-        if self.__snake.get_head_position() == self.__food.get_position():
-            self.__snake.increase_length()
-            self.__snake.increase_score(1)
-            self.__number_of_devoured_foods += 1
-            self.__food.randomize_position()
-            self.__fakefood.randomize_position()
-
-    def __check_snake_fakefood_collision(self):
-        if self.__snake.get_head_position() == self.__food.get_position():
-            self.__snake.increase_length()
-            self.__snake.increase_score(0)
-            self.__number_of_devoured_foods += 1
-            self.__food.randomize_position()
-            self.__fakefood.randomize_position()
 
     def __draw_objects(self):
         self.__snake.draw(self.__surface)
-        self.__food.draw(self.__surface)
-        self.__fakefood.draw(self.__surface)
+        self.__apple.draw(self.__surface)
+        self.__fakeapple.draw(self.__surface)
 
     def __update_screen(self):
         self.__screen.blit(self.__surface, (0, 0))
@@ -189,9 +196,7 @@ class SnakeGame:
             self.__handle_keys()
             self.__draw_grid(self.__surface)
             self.__snake.move()
-            self.__check_snake_food_collision()
-            self.__check_snake_food_collision()
-
+            self.__check_collisions()
             self.__draw_objects()
             self.__update_screen()
 
