@@ -3,12 +3,24 @@ import sys
 import random
 
 
+# Farben für das Snake-Spiel
+class GameColors:
+    # Schlange
+    BODY_COLOR = (46, 58, 89)  # Dunkles Blau für den Körper
+    HEAD_COLOR = (46, 58, 89)  # Helles Grün für den Kopf
+
+    # Früchte
+    APPLE_COLOR = (231, 76, 60)  # Rot für den Apfel
+    FAKE_APPLE_COLOR = (155, 89, 182)  # Lila für den Fake-Apfel
+    MIN_APPLE_COLOR = (39, 174, 96)  # Grün für den Halb-Apfel
+
+
 class Snake:
     def __init__(self):
         self.__length = 1
         self.__positions = [((Settings.screen_width / 2), (Settings.screen_height / 2))]
         self.__direction = random.choice(Settings.directions)
-        self.__color = (17, 24, 47)
+        self.__color = GameColors.BODY_COLOR
         self.__score = 0
 
     def turn(self, new_direction):
@@ -42,6 +54,11 @@ class Snake:
     def increase_length(self):
         self.__length += 1
 
+    def decrease_length(self):
+        if self.__length > 1:  # Verhindern, dass die Länge negativ wird
+            self.__length -= 1
+            self.__positions.pop()  # Entfernt das letzte Segment
+
     def reset_length(self):
         self.__length = 1
 
@@ -58,26 +75,32 @@ class Snake:
         for index, pos in enumerate(self.__positions):
                     r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
                     if index == 0:  # Kopf der Schlange
-                        pygame.draw.rect(surface, (0, 255,0 ), r)  # Rote Farbe für den Kopf
+                        pygame.draw.rect(surface, GameColors.HEAD_COLOR, r)  # Rote Farbe für den Kopf
                     else:
                         pygame.draw.rect(surface, self.__color, r)  # Normale Farbe für den Körper
                     pygame.draw.rect(surface, (93, 216, 228), r, 1)  # Rand für alle Teile
 
 
 class Food:
-    def __init__(self, count=3, color =(0,0,0)):
+    def __init__(self, count=3, color=(0, 0, 0), snake=None):
         self.__positions = []
         self.__count = count
         self.__color = color
+        self.snake = snake  # Referenz auf die Schlange
         self.randomize_positions()
 
     def get_positions(self):
         return self.__positions
 
     def randomize_positions(self):
-        self.__positions = [(random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size,
-                             random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size)
-                            for _ in range(self.__count)]
+        self.__positions = []
+        while len(self.__positions) < self.__count:
+            x_pos = random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size
+            y_pos = random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size
+            new_position = (x_pos, y_pos)
+            # Hier wird die Position der Frucht gegen die Positionen der Schlange geprüft
+            if new_position not in self.__positions and new_position not in self.snake.get_positions():
+                self.__positions.append(new_position)
 
     def draw(self, surface):
         for pos in self.__positions:
@@ -86,9 +109,11 @@ class Food:
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
 
+
+
 class Apple(Food):
-    def __init__(self, count=2):
-        super().__init__(count, color=(255, 0, 0))
+    def __init__(self, count=2, snake=None):
+        super().__init__(count, GameColors.APPLE_COLOR, snake=snake)
 
     def action(self, snake):
         snake.increase_length()
@@ -96,8 +121,8 @@ class Apple(Food):
 
 
 class FakeApple(Food):
-    def __init__(self, count=1):
-        super().__init__(count, color=(0, 0, 255))
+    def __init__(self, count=1, snake=None):
+        super().__init__(count, GameColors.FAKE_APPLE_COLOR, snake=snake)
 
     def action(self, snake):
         snake.increase_length()
@@ -106,6 +131,12 @@ class FakeApple(Food):
         snake.increase_score(0)  # Fake-Apfel gibt 3 Punkte
 
 
+class MinApple(Food):
+    def __init__(self, count=1, snake=None):
+        super().__init__(count, GameColors.MIN_APPLE_COLOR, snake=snake)
+
+    def action(self, snake):
+        snake.decrease_length()  # HalfApple reduzeirt Länge
 
 
 class Settings:
@@ -127,13 +158,15 @@ class Settings:
 class SnakeGame:
     def __init__(self):
         pygame.init()
-        self.__clock = pygame.time.Clock()
+        self.__clock = pygame.time.Clock()  # Hier setzen wir das Attribut __clock
         self.__screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height), 0, 32)
         self.__surface = pygame.Surface(self.__screen.get_size()).convert()
         self.__snake = Snake()
-        self.__apple = Apple(count=3)
-        self.__fakeapple = FakeApple(count=2)
+        self.__apple = Apple(count=1, snake=self.__snake)
+        self.__fakeapple = FakeApple(count=1, snake=self.__snake)
+        self.__halfapple = MinApple(count=1, snake=self.__snake)
         self.__my_font = pygame.font.SysFont("monospace", 16)
+
 
     def __check_collisions(self):
         head_pos = self.__snake.get_head_position()
@@ -144,9 +177,15 @@ class SnakeGame:
             self.__fakeapple.randomize_positions()
 
         elif head_pos in self.__fakeapple.get_positions():
-            self.__fakeapple.action(self.__snake)  
+            self.__fakeapple.action(self.__snake)
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+
+        elif head_pos in self.__halfapple.get_positions():
+            self.__halfapple.action(self.__snake)
+            self.__halfapple.randomize_positions()
+            self.__halfapple.randomize_positions()
+
 
     def __draw_grid(self, surface):
         for y in range(0, int(Settings.grid_height)):
@@ -159,6 +198,11 @@ class SnakeGame:
     def __quit_game(self):
         pygame.quit()
         sys.exit()
+    def __pause(self):
+
+
+
+
 
     def __handle_keys(self):
         for event in pygame.event.get():
@@ -183,6 +227,8 @@ class SnakeGame:
         self.__snake.draw(self.__surface)
         self.__apple.draw(self.__surface)
         self.__fakeapple.draw(self.__surface)
+        self.__halfapple.draw(self.__surface)
+
 
     def __update_screen(self):
         self.__screen.blit(self.__surface, (0, 0))
