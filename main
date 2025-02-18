@@ -66,6 +66,9 @@ class Snake:
     def increase_score(self, value):
         self.__score += value
 
+    def decrease_score(self, value):
+           self.__score -= value
+
     def get_score(self):
         return self.__score
 
@@ -118,7 +121,7 @@ class Apple(Food):
 
     def action(self, snake):
         snake.increase_length()
-        snake.increase_score(1)  # Apfel gibt 2 Punkte
+        snake.increase_score(3)  # Apfel gibt 3 Punkte
 
 
 class FakeApple(Food):
@@ -126,6 +129,7 @@ class FakeApple(Food):
         super().__init__(count, GameColors.FAKE_APPLE_COLOR, snake=snake)
 
     def action(self, snake):
+        snake.increase_score(1)
         snake.increase_length()
         snake.increase_length()
         snake.increase_length()
@@ -138,6 +142,8 @@ class MinApple(Food):
 
     def action(self, snake):
         snake.decrease_length()  # HalfApple reduzeirt Länge
+        snake.decrease_length()
+        snake.decrease_score(1)  # HalfApple reduziert Score
 
 
 class Settings:
@@ -175,18 +181,21 @@ class SnakeGame:
 
         if head_pos in self.__apple.get_positions():
             self.__apple.action(self.__snake)
+            self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
 
         elif head_pos in self.__fakeapple.get_positions():
             self.__fakeapple.action(self.__snake)
+            self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
 
         elif head_pos in self.__halfapple.get_positions():
             self.__halfapple.action(self.__snake)
             self.__halfapple.randomize_positions()
-            self.__halfapple.randomize_positions()
+            self.__apple.randomize_positions()
+            self.__fakeapple.randomize_positions()
 
 
     def __draw_grid(self, surface):
@@ -211,11 +220,19 @@ class SnakeGame:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     self.__snake.turn(Settings.up)
+                elif event.key == pygame.K_w:
+                    self.__snake.turn(Settings.up)
+                elif event.key == pygame.K_s:
+                    self.__snake.turn(Settings.down)
                 elif event.key == pygame.K_DOWN:
                     self.__snake.turn(Settings.down)
                 elif event.key == pygame.K_LEFT:
                     self.__snake.turn(Settings.left)
+                elif event.key == pygame.K_a:
+                    self.__snake.turn(Settings.left)
                 elif event.key == pygame.K_RIGHT:
+                    self.__snake.turn(Settings.right)
+                elif event.key == pygame.K_d:
                     self.__snake.turn(Settings.right)
                 elif event.key == pygame.K_ESCAPE:
                     self.__quit_game()
