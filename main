@@ -1,3 +1,4 @@
+
 import pygame
 import sys
 import random
@@ -166,6 +167,7 @@ class SnakeGame:
         self.__fakeapple = FakeApple(count=1, snake=self.__snake)
         self.__halfapple = MinApple(count=1, snake=self.__snake)
         self.__my_font = pygame.font.SysFont("monospace", 16)
+        self.__paused = False  # Variable zur Steuerung der Pause
 
 
     def __check_collisions(self):
@@ -198,11 +200,9 @@ class SnakeGame:
     def __quit_game(self):
         pygame.quit()
         sys.exit()
-    def __pause(self):
 
-
-
-
+    def __toggle_pause(self):
+        self.__paused = not self.__paused  # Wechselt zwischen pausiert und nicht pausiert
 
     def __handle_keys(self):
         for event in pygame.event.get():
@@ -221,6 +221,8 @@ class SnakeGame:
                     self.__quit_game()
                 elif event.key == pygame.K_q:
                     self.__quit_game()
+                elif event.key == pygame.K_p:  # NEU: Pause-Taste
+                    self.__paused = not self.__paused  # Toggle Pause-Status
 
 
     def __draw_objects(self):
@@ -236,14 +238,19 @@ class SnakeGame:
         self.__screen.blit(text, (5, 10))
         pygame.display.update()
 
+        if self.__paused:
+            pause_text = self.__my_font.render("PAUSE - Press P to Resume", True, (255, 0, 0))
+            self.__screen.blit(pause_text, (Settings.screen_width // 2 - 80, Settings.screen_height // 2))
+
     def main_loop(self):
         while True:
             self.__clock.tick(10)
             self.__handle_keys()
-            self.__draw_grid(self.__surface)
-            self.__snake.move()
-            self.__check_collisions()
-            self.__draw_objects()
+            if not self.__paused:  # NEU: Nur bewegen, wenn nicht pausiert
+                self.__draw_grid(self.__surface)
+                self.__snake.move()
+                self.__check_collisions()
+                self.__draw_objects()
             self.__update_screen()
 
 
