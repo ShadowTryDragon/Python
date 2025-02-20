@@ -141,6 +141,43 @@ class MinApple(Food):
         snake.decrease_score()  # HalfApple reduziert Score
 
 
+class ReverseApple(Food):
+    def __init__(self, count=1, snake=None):
+        super().__init__(count, (255, 165, 0), snake=snake)  # Orange Farbe für die Frucht
+        self.__reversed = False
+        self.__start_time = None
+        self.__active = False  # FRUCHT IST NICHT SOFORT DA
+
+    def action(self, snake):
+        if self.__active and not self.__reversed:  # Nur aktiv, wenn sie erscheinen darf
+            self.__reversed = True
+            self.__start_time = pygame.time.get_ticks()
+            self.reverse_controls(snake)
+
+    def reverse_controls(self, snake):
+        # Steuerung umkehren
+        Settings.up, Settings.down = Settings.down, Settings.up
+        Settings.left, Settings.right = Settings.right, Settings.left
+
+    def reset_controls(self):
+        # Steuerung zurücksetzen
+        Settings.up, Settings.down = (0, -1), (0, 1)
+        Settings.left, Settings.right = (-1, 0), (1, 0)
+        self.__reversed = False
+        self.__active = False  # Nach Verwendung verschwindet die Frucht
+
+    def update(self):
+        if self.__reversed:
+            elapsed_time = pygame.time.get_ticks() - self.__start_time
+            if elapsed_time >= 5000:  # Nach 5 Sekunden zurücksetzen
+                self.reset_controls()
+
+    def activate(self):
+        self.__active = True  # Aktiviert die Frucht
+        self.randomize_positions()  # Neue Position setzen
+
+
+
 class Settings:
     screen_width = 480
     screen_height = 480
