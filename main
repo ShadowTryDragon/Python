@@ -52,12 +52,12 @@ class Snake:
         self.__direction = random.choice(Settings.directions)
         self.__score = 0
 
-    def increase_length(self):
-        self.__length += 1
+    def increase_length(self, value):
+        self.__length += value
 
-    def decrease_length(self):
+    def decrease_length(self, value):
         if self.__length > 1:  # Verhindern, dass die Länge negativ wird
-            self.__length -= 1
+            self.__length -= value
             self.__positions.pop()  # Entfernt das letzte Segment
 
     def reset_length(self):
@@ -66,8 +66,8 @@ class Snake:
     def increase_score(self, value):
         self.__score += value
 
-    def decrease_score(self, value):
-           self.__score -= value
+    def decrease_score(self):
+           self.__score /= 2
 
     def get_score(self):
         return self.__score
@@ -120,7 +120,7 @@ class Apple(Food):
         super().__init__(count, GameColors.APPLE_COLOR, snake=snake)
 
     def action(self, snake):
-        snake.increase_length()
+        snake.increase_length(1)
         snake.increase_score(3)  # Apfel gibt 3 Punkte
 
 
@@ -130,10 +130,7 @@ class FakeApple(Food):
 
     def action(self, snake):
         snake.increase_score(1)
-        snake.increase_length()
-        snake.increase_length()
-        snake.increase_length()
-        snake.increase_score(0)  # Fake-Apfel gibt 3 Punkte
+        snake.increase_length(3)
 
 
 class MinApple(Food):
@@ -141,9 +138,7 @@ class MinApple(Food):
         super().__init__(count, GameColors.MIN_APPLE_COLOR, snake=snake)
 
     def action(self, snake):
-        snake.decrease_length()  # HalfApple reduzeirt Länge
-        snake.decrease_length()
-        snake.decrease_score(1)  # HalfApple reduziert Score
+        snake.decrease_score()  # HalfApple reduziert Score
 
 
 class Settings:
@@ -234,6 +229,8 @@ class SnakeGame:
                     self.__snake.turn(Settings.right)
                 elif event.key == pygame.K_d:
                     self.__snake.turn(Settings.right)
+                elif event.key == pygame.K_r:
+                    self.__snake.reset()
                 elif event.key == pygame.K_ESCAPE:
                     self.__quit_game()
                 elif event.key == pygame.K_q:
