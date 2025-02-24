@@ -146,15 +146,19 @@ class ReverseApple(Food):
         super().__init__(count, (255, 165, 0), snake=snake)  # Orange Farbe für die Frucht
         self.__reversed = False
         self.__start_time = None
-        self.__active = False  # FRUCHT IST NICHT SOFORT DA
+        self.__active = False  # FRUCHT IST JETZT DIREKT SICHTBAR
+        self.__fruit_counter = 0  # Zähler für gefressene Früchte
+        self.randomize_positions()  # Zufällige Position setzen
 
     def action(self, snake):
         if self.__active and not self.__reversed:  # Nur aktiv, wenn sie erscheinen darf
             self.__reversed = True
             self.__start_time = pygame.time.get_ticks()
-            self.reverse_controls(snake)
+            self.reverse_controls()
+            self.__active = False  # Nach Nutzung verschwindet die Frucht
+            self.__fruit_counter = 0  # Zähler zurücksetzen
 
-    def reverse_controls(self, snake):
+    def reverse_controls(self):
         # Steuerung umkehren
         Settings.up, Settings.down = Settings.down, Settings.up
         Settings.left, Settings.right = Settings.right, Settings.left
@@ -164,18 +168,29 @@ class ReverseApple(Food):
         Settings.up, Settings.down = (0, -1), (0, 1)
         Settings.left, Settings.right = (-1, 0), (1, 0)
         self.__reversed = False
-        self.__active = False  # Nach Verwendung verschwindet die Frucht
+        self.__active = True  # Frucht erscheint wieder
+        self.randomize_positions()  # Neue Position setzen
 
     def update(self):
         if self.__reversed:
             elapsed_time = pygame.time.get_ticks() - self.__start_time
-            if elapsed_time >= 5000:  # Nach 5 Sekunden zurücksetzen
+            if elapsed_time >= 50000:  # Nach 5 Min zurücksetzen
                 self.reset_controls()
 
-    def activate(self):
-        self.__active = True  # Aktiviert die Frucht
-        self.randomize_positions()  # Neue Position setzen
+    def reset_fruit_eaten(self):
+        self.__fruit_counter = 0
 
+
+    def track_fruit_eaten(self):
+        """Erhöht den Zähler für gefressene Früchte und aktiviert die Frucht nach 10 Früchten."""
+        self.__fruit_counter += 1
+        if self.__fruit_counter >= 10:
+           self.__active = True
+
+
+    def draw(self, surface):
+        if self.__active:  # NUR ZEICHNEN, WENN AKTIV
+            super().draw(surface)
 
 
 class Settings:
@@ -204,6 +219,7 @@ class SnakeGame:
         self.__apple = Apple(count=1, snake=self.__snake)
         self.__fakeapple = FakeApple(count=1, snake=self.__snake)
         self.__halfapple = MinApple(count=1, snake=self.__snake)
+        self.__reverse_apple = ReverseApple(count=1, snake=self.__snake)  # NEU
         self.__my_font = pygame.font.SysFont("monospace", 16)
         self.__paused = False  # Variable zur Steuerung der Pause
 
@@ -212,22 +228,33 @@ class SnakeGame:
         head_pos = self.__snake.get_head_position()
 
         if head_pos in self.__apple.get_positions():
+            self.__reverse_apple.track_fruit_eaten()
             self.__apple.action(self.__snake)
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
 
         elif head_pos in self.__fakeapple.get_positions():
+            self.__reverse_apple.track_fruit_eaten()
             self.__fakeapple.action(self.__snake)
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
 
         elif head_pos in self.__halfapple.get_positions():
+            self.__reverse_apple.track_fruit_eaten()
             self.__halfapple.action(self.__snake)
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+
+        elif head_pos in self.__reverse_apple.get_positions():  # NEU
+            self.__reverse_apple.action(self.__snake)
+            self.__reverse_apple.reset_fruit_eaten()
+            self.__apple.randomize_positions()
+            self.__fakeapple.randomize_positions()
+            self.__halfapple.randomize_positions()
+            self.__reverse_apple.randomize_positions()
 
 
     def __draw_grid(self, surface):
@@ -281,7 +308,7 @@ class SnakeGame:
         self.__apple.draw(self.__surface)
         self.__fakeapple.draw(self.__surface)
         self.__halfapple.draw(self.__surface)
-
+        self.__reverse_apple.draw(self.__surface)  # NEU
 
     def __update_screen(self):
         self.__screen.blit(self.__surface, (0, 0))
@@ -302,6 +329,7 @@ class SnakeGame:
                 self.__snake.move()
                 self.__check_collisions()
                 self.__draw_objects()
+                self.__reverse_apple.update()  # NEU
             self.__update_screen()
 
 
