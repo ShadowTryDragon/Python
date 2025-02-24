@@ -24,6 +24,8 @@ class Snake:
         self.__color = GameColors.BODY_COLOR
         self.__score = 0
         self.__invisible = False  # NEU: Unsichtbarkeit
+      
+
 
 
 
