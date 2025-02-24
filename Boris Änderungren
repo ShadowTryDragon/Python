@@ -23,6 +23,9 @@ class Snake:
         self.__direction = random.choice(Settings.directions)
         self.__color = GameColors.BODY_COLOR
         self.__score = 0
+        self.__invisible = False  # NEU: Unsichtbarkeit
+
+
 
     def turn(self, new_direction):
         if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:  # cannot do a 180
@@ -75,14 +78,20 @@ class Snake:
     def reset_score(self):
         self.__score = 0
 
+    def set_invisible(self, value):
+        """Setzt die Unsichtbarkeit der Schlange."""
+        self.__invisible = value
+
     def draw(self, surface):
         for index, pos in enumerate(self.__positions):
-                    r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
-                    if index == 0:  # Kopf der Schlange
-                        pygame.draw.rect(surface, GameColors.HEAD_COLOR, r)  # Rote Farbe für den Kopf
-                    else:
-                        pygame.draw.rect(surface, self.__color, r)  # Normale Farbe für den Körper
-                    pygame.draw.rect(surface, (93, 216, 228), r, 1)  # Rand für alle Teile
+            if self.__invisible:
+                continue  # NICHT ZEICHNEN, WENN UNSICHTBAR
+            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+            if index == 0:  # Kopf der Schlange
+                pygame.draw.rect(surface, GameColors.HEAD_COLOR, r)
+            else:
+                pygame.draw.rect(surface, self.__color, r)
+            pygame.draw.rect(surface, (93, 216, 228), r, 1)  # Rand für alle Teile
 
 
 class Food:
@@ -192,6 +201,47 @@ class ReverseApple(Food):
         if self.__active:  # NUR ZEICHNEN, WENN AKTIV
             super().draw(surface)
 
+class InvisibilityApple(Food):
+    def __init__(self, count=1, snake=None):
+        super().__init__(count, (128, 128, 128), snake=snake)  # Grau für die Unsichtbarkeits-Frucht
+        self.__invisible = False
+        self.__start_time = None
+        self.__active = False  # Wird erst bei 40+ Punkten sichtbar
+
+    def action(self, snake):
+        if self.__active and not self.__invisible:
+            self.__invisible = True
+            self.__start_time = pygame.time.get_ticks()
+            self.__active = False  # Nach Nutzung verschwindet die Frucht
+            self.make_invisible(snake)
+
+    def make_invisible(self, snake):
+        """Setzt die Schlange auf unsichtbar."""
+        snake.set_invisible(True)
+
+    def reset_visibility(self, snake):
+        """Macht die Schlange wieder sichtbar."""
+        snake.set_invisible(False)
+        self.__invisible = False
+
+    def update(self, snake):
+        """Prüft, ob die Unsichtbarkeit abgelaufen ist."""
+        if self.__invisible:
+            elapsed_time = pygame.time.get_ticks() - self.__start_time
+            if elapsed_time >= 5000:  # Nach 5 Sekunden zurücksetzen
+                self.reset_visibility(snake)
+
+    def check_spawn_condition(self, snake):
+        """Aktiviert die Frucht, wenn der Score 40 oder mehr beträgt."""
+        if snake.get_score() >= 40 and not self.__active:
+            self.__active = True
+            self.randomize_positions()  # Neue Position setzen
+
+    def draw(self, surface):
+        if self.__active:  # Nur zeichnen, wenn aktiv
+            super().draw(surface)
+
+
 
 class Settings:
     screen_width = 480
@@ -222,10 +272,11 @@ class SnakeGame:
         self.__reverse_apple = ReverseApple(count=1, snake=self.__snake)  # NEU
         self.__my_font = pygame.font.SysFont("monospace", 16)
         self.__paused = False  # Variable zur Steuerung der Pause
-
+        self.__invisibility_apple = InvisibilityApple(count=1, snake=self.__snake)  # NEU
 
     def __check_collisions(self):
         head_pos = self.__snake.get_head_position()
+
 
         if head_pos in self.__apple.get_positions():
             self.__reverse_apple.track_fruit_eaten()
@@ -233,6 +284,7 @@ class SnakeGame:
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+            self.__invisibility_apple.check_spawn_condition(self.__snake)  # NEU
 
         elif head_pos in self.__fakeapple.get_positions():
             self.__reverse_apple.track_fruit_eaten()
@@ -240,6 +292,7 @@ class SnakeGame:
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+            self.__invisibility_apple.check_spawn_condition(self.__snake)  # NEU
 
         elif head_pos in self.__halfapple.get_positions():
             self.__reverse_apple.track_fruit_eaten()
@@ -247,14 +300,21 @@ class SnakeGame:
             self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
+            self.__invisibility_apple.check_spawn_condition(self.__snake)  # NEU
 
         elif head_pos in self.__reverse_apple.get_positions():  # NEU
             self.__reverse_apple.action(self.__snake)
             self.__reverse_apple.reset_fruit_eaten()
+            self.__invisibility_apple.check_spawn_condition(self.__snake)  # NEU
+
+        elif head_pos in self.__invisibility_apple.get_positions():
+            self.__invisibility_apple.action(self.__snake)
+            self.__reverse_apple.track_fruit_eaten()
+            self.__halfapple.action(self.__snake)
+            self.__halfapple.randomize_positions()
             self.__apple.randomize_positions()
             self.__fakeapple.randomize_positions()
-            self.__halfapple.randomize_positions()
-            self.__reverse_apple.randomize_positions()
+
 
 
     def __draw_grid(self, surface):
@@ -309,6 +369,7 @@ class SnakeGame:
         self.__fakeapple.draw(self.__surface)
         self.__halfapple.draw(self.__surface)
         self.__reverse_apple.draw(self.__surface)  # NEU
+        self.__invisibility_apple.draw(self.__surface)
 
     def __update_screen(self):
         self.__screen.blit(self.__surface, (0, 0))
@@ -330,6 +391,7 @@ class SnakeGame:
                 self.__check_collisions()
                 self.__draw_objects()
                 self.__reverse_apple.update()  # NEU
+                self.__invisibility_apple.update(self.__snake)  # NEU
             self.__update_screen()
 
 
