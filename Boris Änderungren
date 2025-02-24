@@ -24,7 +24,7 @@ class Snake:
         self.__color = GameColors.BODY_COLOR
         self.__score = 0
         self.__invisible = False  # NEU: Unsichtbarkeit
-      
+
 
 
 
@@ -185,7 +185,7 @@ class ReverseApple(Food):
     def update(self):
         if self.__reversed:
             elapsed_time = pygame.time.get_ticks() - self.__start_time
-            if elapsed_time >= 50000:  # Nach 5 Min zurücksetzen
+            if elapsed_time >= 5000:  # Nach 5 Sek zurücksetzen
                 self.reset_controls()
 
     def reset_fruit_eaten(self):
@@ -312,10 +312,7 @@ class SnakeGame:
         elif head_pos in self.__invisibility_apple.get_positions():
             self.__invisibility_apple.action(self.__snake)
             self.__reverse_apple.track_fruit_eaten()
-            self.__halfapple.action(self.__snake)
-            self.__halfapple.randomize_positions()
-            self.__apple.randomize_positions()
-            self.__fakeapple.randomize_positions()
+     
 
 
 
