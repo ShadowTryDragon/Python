@@ -1,4 +1,3 @@
-
 import pygame
 import sys
 import random
@@ -24,10 +23,6 @@ class Snake:
         self.__color = GameColors.BODY_COLOR
         self.__score = 0
         self.__invisible = False  # NEU: Unsichtbarkeit
-
-
-
-
 
     def turn(self, new_direction):
         if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:  # cannot do a 180
@@ -72,7 +67,7 @@ class Snake:
         self.__score += value
 
     def decrease_score(self):
-           self.__score /= 2
+        self.__score /= 2
 
     def get_score(self):
         return self.__score
@@ -122,8 +117,6 @@ class Food:
             r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
             pygame.draw.rect(surface, self.__color, r)
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
-
-
 
 
 class Apple(Food):
@@ -191,17 +184,16 @@ class ReverseApple(Food):
     def reset_fruit_eaten(self):
         self.__fruit_counter = 0
 
-
     def track_fruit_eaten(self):
         """Erhöht den Zähler für gefressene Früchte und aktiviert die Frucht nach 10 Früchten."""
         self.__fruit_counter += 1
         if self.__fruit_counter >= 10:
-           self.__active = True
-
+            self.__active = True
 
     def draw(self, surface):
         if self.__active:  # NUR ZEICHNEN, WENN AKTIV
             super().draw(surface)
+
 
 class InvisibilityApple(Food):
     def __init__(self, count=1, snake=None):
@@ -244,7 +236,6 @@ class InvisibilityApple(Food):
             super().draw(surface)
 
 
-
 class Settings:
     screen_width = 480
     screen_height = 480
@@ -279,7 +270,6 @@ class SnakeGame:
     def __check_collisions(self):
         head_pos = self.__snake.get_head_position()
 
-
         if head_pos in self.__apple.get_positions():
             self.__reverse_apple.track_fruit_eaten()
             self.__apple.action(self.__snake)
@@ -312,9 +302,6 @@ class SnakeGame:
         elif head_pos in self.__invisibility_apple.get_positions():
             self.__invisibility_apple.action(self.__snake)
             self.__reverse_apple.track_fruit_eaten()
-     
-
-
 
     def __draw_grid(self, surface):
         for y in range(0, int(Settings.grid_height)):
@@ -360,7 +347,6 @@ class SnakeGame:
                     self.__quit_game()
                 elif event.key == pygame.K_p:  # NEU: Pause-Taste
                     self.__paused = not self.__paused  # Toggle Pause-Status
-
 
     def __draw_objects(self):
         self.__snake.draw(self.__surface)
