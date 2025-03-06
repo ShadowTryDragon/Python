@@ -344,6 +344,50 @@ class SugarApple(Apple):
             print("[DEBUG] Sugar Apple gegessen! Geschwindigkeit erhöht.")
             snake.flash_red()
 
+class Obstacle:
+    def __init__(self, count=3):  # Standardmäßig 3 Hindernisse
+        self.__positions = []  # Liste mit Hindernis-Positionen
+        self.__directions = []  # Richtung für jedes Hindernis
+        self.__count = count  # Anzahl der Hindernisse
+
+        # 🛑 Zufällige Hindernisse auf dem Spielfeld platzieren
+        for _ in range(self.__count):
+            x_pos = random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size
+            y_pos = random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size
+            self.__positions.append((x_pos, y_pos))
+
+            # 🏃‍♂️ Zufällige Bewegungsrichtung setzen
+            self.__directions.append(random.choice(Settings.directions))
+
+    def move(self):
+        """Bewegt die Hindernisse zufällig über das Spielfeld."""
+        new_positions = []
+
+        for i, (x, y) in enumerate(self.__positions):
+            dx, dy = self.__directions[i]
+
+            # 🔄 Neue Position berechnen (mit Spielfeldbegrenzung)
+            new_x = (x + dx * Settings.grid_size) % Settings.screen_width
+            new_y = (y + dy * Settings.grid_size) % Settings.screen_height
+
+            new_positions.append((new_x, new_y))
+
+            # 🛑 Zufällig Richtung ändern (10% Wahrscheinlichkeit)
+            if random.randint(1, 10) == 1:
+                self.__directions[i] = random.choice(Settings.directions)
+
+        self.__positions = new_positions  # Neue Positionen speichern
+
+    def get_positions(self):
+        """Gibt die Positionen aller Hindernisse zurück."""
+        return self.__positions
+
+    def draw(self, surface):
+        """Zeichnet die Hindernisse auf dem Spielfeld."""
+        for pos in self.__positions:
+            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+            pygame.draw.rect(surface, (255, 0, 0), r)  # 🔴 Hindernisse sind rot
+            pygame.draw.rect(surface, (0, 0, 0), r, 2)  # 🖤 Schwarzer Rand für bessere Sichtbarkeit
 
 
 
@@ -360,12 +404,33 @@ class SnakeGame:
         self.__my_font = pygame.font.SysFont("monospace", 16)
         self.__running = True  # Flag für Spielstatus
         self.__apple = Apple(count=1, snake=self.__snake)  # Standard-Apfel
+        self.__obstacles = Obstacle(count=5)
 
         # 🆕 Spezielle Effekte
         self.__double_points_end_time = None
         self.__speed_boost_end_time = None
         self.__reverse_controls_end_time = None
+        self.__countdown_time = 300  # 300 Sekunden (5 Minuten)
+        self.__countdown_active = True
 
+        # Gesammelte Äpfel
+        self.__collected_apples = 0
+
+    def __update_countdown(self):
+        if self.__countdown_active:
+            # 🕒 Minuten und Sekunden berechnen (mit int)
+            mins, secs = divmod(int(self.__countdown_time), 60)
+
+            # ⏳ Timer-Text erstellen
+            timer_text = "Time: {:02d}:{:02d}".format(mins, secs)
+
+            # ⏬ Countdown verringern (jede Sekunde)
+            if self.__countdown_time > 0:
+                self.__countdown_time -= 1 / 10  # Da das Spiel mit 10 FPS läuft
+            else:
+                self.__running = False  # ⏳ Zeit abgelaufen -> Game Over
+
+            return timer_text  # 🆕 Gibt den formatierten Timer-String zurück
 
     def spawn_random_apple(self):
         """Erzeugt einen zufälligen Spezial-Apfel."""
@@ -379,18 +444,44 @@ class SnakeGame:
     def __check_collisions(self):
         head_pos = self.__snake.get_head_position()
 
+        # 💀 ZUERST prüfen, ob die Schlange sich selbst trifft
+        if head_pos in self.__snake.get_positions()[1:]:
+            print("Game Over: Schlange hat sich selbst getroffen!")
+            self.__running = False  # Spiel sicher stoppen
+            return  # 🚨 Falls das Spiel vorbei ist, müssen wir hier abbrechen!
+
+            # 🛑 Prüfen, ob die Schlange ein Hindernis trifft
+        if head_pos in self.__obstacles.get_positions():
+            print("Game Over: Schlange hat ein Hindernis getroffen!")
+            self.__running = False
+            return
+
         # 🍏 Apfel essen
         if head_pos in self.__apple.get_positions():
             # 🍏 Apfel essen & Effekt aktivieren
             self.__apple.action(self.__snake)
 
+            # 📊 Apfel-Zähler erhöhen
+            self.__collected_apples += 1
+            print("Apfel Gesammelt")
+
             # 🕒 Falls es ein Spezial-Apfel ist, Timer setzen
             if isinstance(self.__apple, SuperApple):
-                self.__double_points_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+                self.__double_points_end_time = pygame.time.get_ticks() + 5000
             elif isinstance(self.__apple, SugarApple):
-                self.__speed_boost_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+                self.__speed_boost_end_time = pygame.time.get_ticks() + 5000
             elif isinstance(self.__apple, ReverseApple):
-                self.__reverse_controls_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+                self.__reverse_controls_end_time = pygame.time.get_ticks() + 5000
+
+            # 🏆 Falls ein Mega-Apfel gegessen wurde → +5 Minuten
+            if isinstance(self.__apple, MegaApple):
+                self.__countdown_time += 300
+                print("[DEBUG] Mega Apple gegessen! +5 Minuten hinzugefügt.")
+
+            # ⏳ Falls **exakt 10, 20, 30... Äpfel gesammelt** wurden → +2 Minuten
+            if self.__collected_apples % 10 == 0:
+                self.__countdown_time += 120
+                print(f"[DEBUG] {self.__collected_apples} Äpfel gesammelt! +2 Minuten hinzugefügt.")
 
             # 🆕 Neuen Apfel generieren (aber Effekt bleibt erhalten)
             if self.should_spawn_mega_apple():
@@ -399,11 +490,6 @@ class SnakeGame:
                 self.__apple = self.spawn_random_apple()
             else:
                 self.__apple = Apple(count=1, snake=self.__snake)
-
-        # 💀 Prüfen, ob die Schlange sich selbst trifft
-        if head_pos in self.__snake.get_positions()[1:]:
-            print("Game Over: Schlange hat sich selbst getroffen!")  # Debugging
-            self.__running = False  # Spiel sicher stoppen
 
     def __update_effects(self):
         current_time = pygame.time.get_ticks()
@@ -454,12 +540,18 @@ class SnakeGame:
             self.__update_screen()
             self.__snake.update_flash()
             self.__update_effects()
+            self.__update_countdown()
+            self.__obstacles.move()
+
+            # 🆕 Falls die Zeit abgelaufen ist, Spiel beenden
+            if self.__countdown_time <= 0:
+                self.__running = False
+
+        print("Game Over: Zeit abgelaufen!")  # Debugging
+        final_score, back_to_menu = self.show_game_over_screen()
+        return final_score, back_to_menu
 
             
-
-        print("Game Over: main_loop() beendet.")  # Debugging
-        final_score = self.show_game_over_screen()  # 🎮 Game Over Bildschirm anzeigen
-        return final_score  # Score zurückgeben für Highscore-Speicherung
 
     def show_game_over_screen(self):
         """Zeigt den Game Over Bildschirm mit der Option, ins Menü zurückzukehren."""
@@ -498,10 +590,25 @@ class SnakeGame:
         self.__screen.fill((0, 0, 0))
         self.__apple.draw(self.__screen)
         self.__snake.draw(self.__screen)
+        self.__obstacles.draw(self.__screen)
 
     def __update_screen(self):
-        text = self.__my_font.render(f"{self.__player_name} | Score: {self.__snake.get_score()}", True, (255, 255, 255))
-        self.__screen.blit(text, (5, 10))
+        # 🎮 Score-Text definieren
+        score_text = f"{self.__player_name} | Score: {self.__snake.get_score()}"
+
+        # 🕒 Minuten & Sekunden für den Timer berechnen
+        mins, secs = divmod(int(self.__countdown_time), 60)
+        timer_text = f"Time: {mins:02d}:{secs:02d}"
+
+        # 🖊️ Beide Texte kombinieren
+        full_text = score_text + " | " + timer_text
+
+        # 🖥️ Text rendern
+        text_surface = self.__my_font.render(full_text, True, (255, 255, 255))
+
+        # 📍 Text oben links zeichnen
+        self.__screen.blit(text_surface, (5, 10))
+
         pygame.display.update()
 
 
