@@ -271,6 +271,7 @@ class FakeApple(Apple):
         self.__color = GameColors.FAKE_APPLE_COLOR  # Pink
 
     def action(self, snake):
+        print("[DEBUG] Fake Apple gegessen! Punkte halbiert.")
         halbierter_score = snake.get_score() // 2
         snake.increase_score(halbierter_score - snake.get_score())  # Score direkt setzen
         snake.flash_red()  # 🟥 Effekt: Schlange leuchtet kurz rot
@@ -283,17 +284,15 @@ class SuperApple(Apple):
         self.__start_time = None
 
     def action(self, snake):
+        print("[DEBUG] Sugar Apple gegessen! Punkte werden VERDOPPELT")
         if not self.__active:
             self.__active = True
             self.__start_time = pygame.time.get_ticks()
             snake.set_double_points(True)
             snake.flash_red()
 
-    def update(self, snake):
-        """Deaktiviert den Effekt nach 5 Sekunden."""
-        if self.__active and pygame.time.get_ticks() - self.__start_time >= 5000:
-            self.__active = False
-            snake.set_double_points(False)
+
+
 
 class MegaApple(Apple):
     def __init__(self, snake=None):
@@ -301,6 +300,7 @@ class MegaApple(Apple):
         self.__color = GameColors.MEGA_APPLE_COLOR  # Rot
 
     def action(self, snake):
+        print("[DEBUG] MEGA APPLE wurde gegessen 50 PUNKTE für Slytherin!.")
         snake.increase_score(50)
         snake.flash_red()
 
@@ -312,6 +312,7 @@ class ReverseApple(Apple):
         self.__start_time = None
 
     def action(self, snake):
+        print("[DEBUG] Reverse Apple gegessen! Steuerung umgekehrt.")  # 🆕 Debug-Ausgabe
         if not self.__reversed:
             self.__reversed = True
             self.__start_time = pygame.time.get_ticks()
@@ -322,11 +323,7 @@ class ReverseApple(Apple):
         Settings.up, Settings.down = Settings.down, Settings.up
         Settings.left, Settings.right = Settings.right, Settings.left
 
-    def update(self):
-        """Deaktiviert die Steuerungsumkehr nach 5 Sekunden."""
-        if self.__reversed and pygame.time.get_ticks() - self.__start_time >= 5000:
-            self.__reversed = False
-            self.reset_controls()
+
 
     def reset_controls(self):
         Settings.up, Settings.down = (0, -1), (0, 1)
@@ -344,13 +341,8 @@ class SugarApple(Apple):
             self.__active = True
             self.__start_time = pygame.time.get_ticks()
             snake.set_speed(15)  # Geschwindigkeit erhöhen
+            print("[DEBUG] Sugar Apple gegessen! Geschwindigkeit erhöht.")
             snake.flash_red()
-
-    def update(self, snake):
-        if self.__active and pygame.time.get_ticks() - self.__start_time >= 5000:
-            self.__active = False
-            snake.set_speed(10)  # Geschwindigkeit zurücksetzen
-
 
 
 
@@ -369,6 +361,11 @@ class SnakeGame:
         self.__running = True  # Flag für Spielstatus
         self.__apple = Apple(count=1, snake=self.__snake)  # Standard-Apfel
 
+        # 🆕 Spezielle Effekte
+        self.__double_points_end_time = None
+        self.__speed_boost_end_time = None
+        self.__reverse_controls_end_time = None
+
 
     def spawn_random_apple(self):
         """Erzeugt einen zufälligen Spezial-Apfel."""
@@ -384,20 +381,51 @@ class SnakeGame:
 
         # 🍏 Apfel essen
         if head_pos in self.__apple.get_positions():
-            self.__apple.action(self.__snake)  # Apfel-Effekt aktivieren
+            # 🍏 Apfel essen & Effekt aktivieren
+            self.__apple.action(self.__snake)
 
-            # 🆕 Apfel neu generieren
+            # 🕒 Falls es ein Spezial-Apfel ist, Timer setzen
+            if isinstance(self.__apple, SuperApple):
+                self.__double_points_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+            elif isinstance(self.__apple, SugarApple):
+                self.__speed_boost_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+            elif isinstance(self.__apple, ReverseApple):
+                self.__reverse_controls_end_time = pygame.time.get_ticks() + 5000  # 5 Sekunden
+
+            # 🆕 Neuen Apfel generieren (aber Effekt bleibt erhalten)
             if self.should_spawn_mega_apple():
                 self.__apple = MegaApple(snake=self.__snake)
-            elif random.randint(1, 5) == 1:  # 20% Wahrscheinlichkeit für Spezial-Apfel
+            elif random.randint(1, 5) == 1:
                 self.__apple = self.spawn_random_apple()
             else:
-                self.__apple = Apple(count=1, snake=self.__snake)  # Normaler Apfel
+                self.__apple = Apple(count=1, snake=self.__snake)
 
         # 💀 Prüfen, ob die Schlange sich selbst trifft
         if head_pos in self.__snake.get_positions()[1:]:
             print("Game Over: Schlange hat sich selbst getroffen!")  # Debugging
             self.__running = False  # Spiel sicher stoppen
+
+    def __update_effects(self):
+        current_time = pygame.time.get_ticks()
+
+        # 🕒 SuperApple-Effekt beenden
+        if self.__double_points_end_time and current_time >= self.__double_points_end_time:
+            self.__double_points_end_time = None
+            self.__snake.set_double_points(False)
+            print("[DEBUG] Super Apple Effekt vorbei. Punkte normal.")
+
+        # 🕒 SugarApple-Effekt beenden (Geschwindigkeit)
+        if self.__speed_boost_end_time and current_time >= self.__speed_boost_end_time:
+            self.__speed_boost_end_time = None
+            self.__snake.set_speed(10)
+            print("[DEBUG] Sugar Apple Effekt vorbei. Geschwindigkeit normal.")
+
+        # 🕒 ReverseApple-Effekt beenden (Steuerung)
+        if self.__reverse_controls_end_time and current_time >= self.__reverse_controls_end_time:
+            self.__reverse_controls_end_time = None
+            Settings.up, Settings.down = (0, -1), (0, 1)
+            Settings.left, Settings.right = (-1, 0), (1, 0)
+            print("[DEBUG] Reverse Apple Effekt vorbei. Steuerung wieder normal.")
 
     def __handle_keys(self):
         for event in pygame.event.get():
@@ -425,6 +453,9 @@ class SnakeGame:
             self.__draw_objects()
             self.__update_screen()
             self.__snake.update_flash()
+            self.__update_effects()
+
+            
 
         print("Game Over: main_loop() beendet.")  # Debugging
         final_score = self.show_game_over_screen()  # 🎮 Game Over Bildschirm anzeigen
