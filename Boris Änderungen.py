@@ -56,6 +56,31 @@ def get_highscores():
     conn.close()
     return scores
 
+def update_highscore(name, new_score):
+    """Aktualisiert den Highscore eines Spielers, falls der neue Score höher ist."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+
+    # 🔍 Prüfen, ob der Spieler existiert und seinen aktuellen Highscore abrufen
+    cursor.execute("SELECT score FROM highscores WHERE name = ?", (name,))
+    result = cursor.fetchone()
+
+    if result:
+        current_highscore = result[0]
+        if new_score > current_highscore:
+            cursor.execute("UPDATE highscores SET score = ? WHERE name = ?", (new_score, name))
+            print(f"[DEBUG] Neuer Highscore für {name}: {new_score} (alt: {current_highscore})")
+        else:
+            print(f"[DEBUG] Score {new_score} ist niedriger als Highscore {current_highscore} - kein Update.")
+    else:
+        # Falls der Name nicht existiert, sollte er neu gespeichert werden (eigentlich nicht nötig, weil Name geprüft wurde)
+        cursor.execute("INSERT INTO highscores (name, score) VALUES (?, ?)", (name, new_score))
+        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {new_score} hinzugefügt!")
+
+    conn.commit()
+    conn.close()
+
+
 
 # === Startmenü ===
 class Menu:
@@ -303,6 +328,18 @@ class Apple:
             if new_position not in self.__positions and new_position not in self.snake.get_positions():
                 self.__positions.append(new_position)
 
+    def relocate_apple(self, snake, obstacles):
+        """Platziert den Apfel an eine neue zufällige Stelle, die nicht von der Schlange oder Hindernissen besetzt ist."""
+        while True:
+            x_pos = random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size
+            y_pos = random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size
+            new_position = (x_pos, y_pos)
+
+            # ✅ Sicherstellen, dass die neue Position nicht auf der Schlange oder einem Hindernis liegt
+            if new_position not in snake.get_positions() and new_position not in obstacles.get_positions():
+                self.__positions = [new_position]
+                break  # ✅ Gültige Position gefunden, Schleife beenden
+
     def action(self, snake):
         snake.increase_length(1)
         snake.increase_score(3)
@@ -548,7 +585,11 @@ class SnakeGame:
             else:
                 self.__apple = Apple(count=1, snake=self.__snake)
 
-
+        # 🛑 Falls ein Hindernis einen Apfel trifft → Apfel neu platzieren!
+        for obstacle_pos in self.__obstacles.get_positions():
+            if obstacle_pos in self.__apple.get_positions():
+                print("[DEBUG] Apfel wurde von einem Hindernis getroffen! Neuer Apfel erscheint.")
+                self.__apple.relocate_apple(self.__snake, self.__obstacles)
 
     def __update_effects(self):
         current_time = pygame.time.get_ticks()
@@ -636,13 +677,13 @@ class SnakeGame:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:  # 🎮 Mit gleichem Namen weiterspielen
                         print(f"Spiel wird mit {self.__player_name} neugestartet...")
-                        return final_score, False, self.__player_name  # False = Nicht ins Menü, gleicher Name
-                    elif event.key == pygame.K_n:  # ✏️ Neuen Namen wählen
+                        return final_score, False, self.__player_name  # Gleiches Spiel, gleicher Name
+                    elif event.key == pygame.K_n:  # ✏️ Neuer Name wählen
                         print("Neuen Namen eingeben...")
-                        return final_score, False, None  # None = Neuer Name wird gewählt
+                        return final_score, False, None  # Name muss neu eingegeben werden
                     elif event.key == pygame.K_m:  # 🏠 Zurück ins Menü
                         print("Zurück ins Menü.")
-                        return final_score, True, None  # True = Zurück ins Menü
+                        return final_score, True, None  # Spieler geht ins Menü zurück
 
     def __draw_objects(self):
         self.__screen.fill((0, 0, 0))
@@ -679,13 +720,16 @@ def start_game(screen):
         final_score, back_to_menu, new_name = game.main_loop()
 
         if final_score is not None:
-            save_score(player_name, final_score)  # 💾 Score speichern
+            if new_name == player_name:  # 🎮 Spieler bleibt beim gleichen Namen → Highscore updaten
+                update_highscore(player_name, final_score)
+            else:  # 🆕 Neuer Name → Highscore separat speichern
+                save_score(player_name, final_score)
 
         if back_to_menu:  # 🏠 Falls Spieler "M" drückt, zurück ins Menü
             break
 
         if new_name is None:  # 🎮 Falls Spieler "N" drückt, neuen Namen wählen
-            player_name = get_player_name(screen)
+            player_name = get_player_name(screen)  # Spieler gibt neuen Namen ein
 
 
 # === Hauptfunktion ===
