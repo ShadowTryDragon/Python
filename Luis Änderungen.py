@@ -4,6 +4,8 @@ import sqlite3
 import random
 
 
+
+
 # === Einstellungen ===
 class Settings:
     screen_width = 800  # Breite vergrößern
@@ -89,14 +91,33 @@ class Menu:
 
 
 # === Namenseingabe ===
+
+def is_name_taken(name):
+    """Überprüft, ob der Name bereits in der Datenbank existiert."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM highscores WHERE name = ?", (name,))
+    result = cursor.fetchone()  # Gibt None zurück, falls der Name nicht existiert
+    conn.close()
+    return result is not None  # True = Name existiert, False = Name ist neu
+
+
 def get_player_name(screen):
     font = pygame.font.SysFont("monospace", 30)
     name = ""
 
     while True:
         screen.fill((0, 0, 0))
+
+        # 🖊️ Standard-Text
         text = font.render("Dein Name: " + name, True, (255, 255, 255))
         screen.blit(text, (50, 200))
+
+        # 🔴 Fehlermeldung anzeigen, falls Name bereits vergeben
+        if is_name_taken(name):
+            error_text = font.render("Name existiert bereits! Wähle einen anderen.", True, (255, 0, 0))
+            screen.blit(error_text, (50, 250))
+
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -105,11 +126,13 @@ def get_player_name(screen):
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and name:
-                    return name
+                    if not is_name_taken(name):  # ✅ Nur weiter, wenn der Name NEU ist
+                        return name
                 elif event.key == pygame.K_BACKSPACE:
                     name = name[:-1]
                 elif event.unicode.isalnum() and len(name) < 10:
                     name += event.unicode
+
 
 
 # === Bestenliste anzeigen ===
@@ -153,18 +176,22 @@ class GameColors:
 
 # === Snake-Klasse ===
 class Snake:
+    def __init__(self, start_pos=None, controls=None):
+        """Erstellt eine Schlange mit einer individuellen Startposition und Steuerung."""
+        if start_pos is None:
+            start_pos = (Settings.screen_width / 2, Settings.screen_height / 2)
 
-    def __init__(self):
         self.__length = 1
-        self.__positions = [((Settings.screen_width / 2), (Settings.screen_height / 2))]
+        self.__positions = [start_pos]
         self.__direction = random.choice(Settings.directions)
         self.__score = 0
         self.__speed = 10
         self.__double_points = False
-        self.__original_color = GameColors.BODY_COLOR
         self.__flash_time = None
-        self.__original_color = GameColors.BODY_COLOR  # Originalfarbe speichern
+        self.__original_color = GameColors.BODY_COLOR
         self.__color = self.__original_color  # Standardfarbe setzen
+
+
 
     def flash_red(self):
         """Lässt die Schlange kurz rot aufleuchten."""
@@ -191,10 +218,23 @@ class Snake:
         self.__score += value
 
     def turn(self, new_direction):
+        """Ändert die Richtung, wenn sie nicht entgegengesetzt zur aktuellen ist."""
         if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:
             self.__direction = new_direction
 
+    def handle_key(self, key):
+        """Steuert die Schlange basierend auf den zugewiesenen Tasten."""
+        if key == self.controls[0]:  # Hoch
+            self.turn(Settings.up)
+        elif key == self.controls[1]:  # Runter
+            self.turn(Settings.down)
+        elif key == self.controls[2]:  # Links
+            self.turn(Settings.left)
+        elif key == self.controls[3]:  # Rechts
+            self.turn(Settings.right)
+
     def move(self):
+        """Bewegt die Schlange in die aktuelle Richtung."""
         head_pos = self.get_head_position()
         x, y = self.__direction
         new = (((head_pos[0] + (x * Settings.grid_size)) % Settings.screen_width),
@@ -212,26 +252,35 @@ class Snake:
     def get_head_position(self):
         return self.__positions[0]
 
+    def reduce_length(self, amount):
+        """Verkürzt die Schlange um `amount`, aber lässt mindestens 1 Segment übrig."""
+        self.__length = max(1, self.__length - amount)  # Mindestlänge = 1
+        self.__positions = self.__positions[:self.__length]  # Liste kürzen
+
     def reset(self):
+        """Setzt die Schlange zurück auf ihre Startwerte."""
         self.__length = 1
         self.__positions = [((Settings.screen_width / 2), (Settings.screen_height / 2))]
         self.__direction = random.choice(Settings.directions)
         self.__score = 0
 
     def increase_length(self, value):
+        """Verlängert die Schlange um `value` Segmente."""
         self.__length += value
-
-    def increase_score(self, value):
-        self.__score += value
 
     def get_score(self):
         return self.__score
 
-    def draw(self, surface):
+    def draw(self, surface, color=None):
+        """Zeichnet die Schlange auf den Bildschirm."""
+        if color is None:
+            color = self.__color
+
         for index, pos in enumerate(self.__positions):
             r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
-            pygame.draw.rect(surface, self.__color if index else GameColors.HEAD_COLOR, r)
+            pygame.draw.rect(surface, color if index else GameColors.HEAD_COLOR, r)
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
+
 
 # === Apfel-Klasse ===
 class Apple:
@@ -263,6 +312,8 @@ class Apple:
             r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
             pygame.draw.rect(surface, self.__color, r)  # ✅ Benutze self.__color
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
+
+
 
 
 class FakeApple(Apple):
@@ -378,6 +429,8 @@ class Obstacle:
 
         self.__positions = new_positions  # Neue Positionen speichern
 
+
+
     def get_positions(self):
         """Gibt die Positionen aller Hindernisse zurück."""
         return self.__positions
@@ -441,27 +494,31 @@ class SnakeGame:
         """Prüft, ob der Mega Apple erscheinen soll."""
         return self.__snake.get_score() >= 50 and random.randint(1, 10) == 1  # 10% Wahrscheinlichkeit
 
-    def __check_collisions(self):
+    def __check_collisions(self, second_snake=None):
+        """Prüft, ob die Schlange (und optional eine zweite) eine Kollision hat."""
         head_pos = self.__snake.get_head_position()
 
-        # 💀 ZUERST prüfen, ob die Schlange sich selbst trifft
+        # 💀 Selbst-Kollision
         if head_pos in self.__snake.get_positions()[1:]:
             print("Game Over: Schlange hat sich selbst getroffen!")
-            self.__running = False  # Spiel sicher stoppen
-            return  # 🚨 Falls das Spiel vorbei ist, müssen wir hier abbrechen!
+            self.__running = False
+            return
 
-            # 🛑 Prüfen, ob die Schlange ein Hindernis trifft
+        # 🛑 Falls der Kopf ein Hindernis trifft → Game Over!
         if head_pos in self.__obstacles.get_positions():
             print("Game Over: Schlange hat ein Hindernis getroffen!")
             self.__running = False
             return
 
+        # 🛑 Falls ein Hindernis den Körper trifft → Schlange kürzen!
+        for segment in self.__snake.get_positions()[1:]:  # Nur den Körper prüfen, nicht den Kopf
+            if segment in self.__obstacles.get_positions():
+                print("[DEBUG] Hindernis hat die Schlange getroffen! Länge -1")
+                self.__snake.reduce_length(1)
+
         # 🍏 Apfel essen
         if head_pos in self.__apple.get_positions():
-            # 🍏 Apfel essen & Effekt aktivieren
-            self.__apple.action(self.__snake)
-
-            # 📊 Apfel-Zähler erhöhen
+            self.__apple.action(self.__snake)  # Apfel-Effekt aktivieren
             self.__collected_apples += 1
             print("Apfel Gesammelt")
 
@@ -483,13 +540,15 @@ class SnakeGame:
                 self.__countdown_time += 120
                 print(f"[DEBUG] {self.__collected_apples} Äpfel gesammelt! +2 Minuten hinzugefügt.")
 
-            # 🆕 Neuen Apfel generieren (aber Effekt bleibt erhalten)
+            # 🆕 Neuen Apfel generieren
             if self.should_spawn_mega_apple():
                 self.__apple = MegaApple(snake=self.__snake)
             elif random.randint(1, 5) == 1:
                 self.__apple = self.spawn_random_apple()
             else:
                 self.__apple = Apple(count=1, snake=self.__snake)
+
+
 
     def __update_effects(self):
         current_time = pygame.time.get_ticks()
@@ -548,21 +607,21 @@ class SnakeGame:
                 self.__running = False
 
         print("Game Over: Zeit abgelaufen!")  # Debugging
-        final_score, back_to_menu = self.show_game_over_screen()
-        return final_score, back_to_menu
-
-            
+        final_score, back_to_menu, new_name = self.show_game_over_screen()
+        return final_score, back_to_menu, new_name
 
     def show_game_over_screen(self):
-        """Zeigt den Game Over Bildschirm mit der Option, ins Menü zurückzukehren."""
+        """Zeigt den Game Over Bildschirm mit der Möglichkeit, mit dem gleichen Namen weiterzuspielen."""
         font = pygame.font.SysFont("monospace", 30)
-        final_score = self.__snake.get_score()  # Punktzahl speichern
+        final_score = self.__snake.get_score()
 
         while True:
             self.__screen.fill((0, 0, 0))
+
+            # 🎮 Game Over Nachricht
             text1 = font.render("GAME OVER", True, (255, 0, 0))
             text2 = font.render(f"Score: {final_score}", True, (255, 255, 255))
-            text3 = font.render("Enter: Neu starten | ESC: Beenden | M: Menü", True, (200, 200, 200))
+            text3 = font.render("Enter: Neustart | N: Neuer Name | M: Menü", True, (200, 200, 200))
 
             self.__screen.blit(text1, (Settings.screen_width // 2 - text1.get_width() // 2, 100))
             self.__screen.blit(text2, (Settings.screen_width // 2 - text2.get_width() // 2, 160))
@@ -575,16 +634,15 @@ class SnakeGame:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        print("Spiel wird neugestartet...")  # Debugging
-                        return final_score, False  # 🆕 False bedeutet: Spiel neu starten
-                    elif event.key == pygame.K_m:  # 🆕 Taste M für Menü
-                        print("Zurück zum Menü.")  # Debugging
-                        return final_score, True  # 🆕 True bedeutet: Zurück ins Menü
-                    elif event.key == pygame.K_ESCAPE:
-                        print("Spiel beendet.")  # Debugging
-                        pygame.quit()
-                        sys.exit()
+                    if event.key == pygame.K_RETURN:  # 🎮 Mit gleichem Namen weiterspielen
+                        print(f"Spiel wird mit {self.__player_name} neugestartet...")
+                        return final_score, False, self.__player_name  # False = Nicht ins Menü, gleicher Name
+                    elif event.key == pygame.K_n:  # ✏️ Neuen Namen wählen
+                        print("Neuen Namen eingeben...")
+                        return final_score, False, None  # None = Neuer Name wird gewählt
+                    elif event.key == pygame.K_m:  # 🏠 Zurück ins Menü
+                        print("Zurück ins Menü.")
+                        return final_score, True, None  # True = Zurück ins Menü
 
     def __draw_objects(self):
         self.__screen.fill((0, 0, 0))
@@ -614,19 +672,27 @@ class SnakeGame:
 
 # === Spiel starten ===
 def start_game(screen):
-    while True:  # 🆕 Diese Schleife sorgt für echten Neustart nach Game Over
-        player_name = get_player_name(screen)
+    player_name = get_player_name(screen)  # 🆕 Initialen Namen holen
+
+    while True:
         game = SnakeGame(player_name)
-        final_score, back_to_menu = game.main_loop()  # 🆕 Menü-Option abrufen
+        final_score, back_to_menu, new_name = game.main_loop()
 
         if final_score is not None:
             save_score(player_name, final_score)  # 💾 Score speichern
 
-        if back_to_menu:  # 🆕 Falls der Spieler "M" drückt, zurück ins Menü
+        if back_to_menu:  # 🏠 Falls Spieler "M" drückt, zurück ins Menü
             break
+
+        if new_name is None:  # 🎮 Falls Spieler "N" drückt, neuen Namen wählen
+            player_name = get_player_name(screen)
 
 
 # === Hauptfunktion ===
+
+
+
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
