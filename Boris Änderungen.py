@@ -307,6 +307,81 @@ class Snake:
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
 
+# === BOB ===
+
+class BotSnake:
+    def __init__(self):
+        """Erstellt eine zweite Schlange (Bob), die gegen den Spieler spielt."""
+        self.__length = 1
+        self.__positions = [((Settings.screen_width / 4), (Settings.screen_height / 4))]  # Bob startet links oben
+        self.__direction = random.choice(Settings.directions)  # Zufällige Richtung
+        self.__alive = True
+        self.__respawn_time = None  # Zeitstempel für Wiedergeburt nach Kollision
+
+    def get_positions(self):
+        return self.__positions
+
+    def get_head_position(self):
+        return self.__positions[0]
+
+    def move_towards_apple(self, apple):
+        """Bewegt Bob in Richtung des nächsten Apfels."""
+        if not self.__alive:  # Falls Bob tot ist, bleibt er stehen
+            return
+
+        head_x, head_y = self.get_head_position()
+        apple_x, apple_y = apple.get_positions()[0]  # Nimmt den ersten Apfel als Ziel
+
+        # 🧠 KI-Logik: Gehe horizontal oder vertikal in Richtung des Apfels
+        if abs(head_x - apple_x) > abs(head_y - apple_y):  # Bewege dich horizontal
+            self.__direction = Settings.left if head_x > apple_x else Settings.right
+        else:  # Bewege dich vertikal
+            self.__direction = Settings.up if head_y > apple_y else Settings.down
+
+        self.move()
+
+    def move(self):
+        """Bewegt Bob in die aktuelle Richtung."""
+        if not self.__alive:
+            return
+
+        head_pos = self.get_head_position()
+        x, y = self.__direction
+        new_pos = (((head_pos[0] + (x * Settings.grid_size)) % Settings.screen_width),
+                   (head_pos[1] + (y * Settings.grid_size)) % Settings.screen_height)
+
+        self.__positions.insert(0, new_pos)
+        if len(self.__positions) > self.__length:
+            self.__positions.pop()
+
+    def respawn(self):
+        """Bob startet nach 20 Sekunden neu an einer zufälligen Position."""
+        self.__positions = [((random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size),
+                             (random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size))]
+        self.__direction = random.choice(Settings.directions)
+        self.__alive = True
+        print("[DEBUG] Bob ist neu gestartet!")
+
+    def check_respawn(self):
+        """Falls Bob tot ist, prüfe, ob die 20 Sekunden vorbei sind."""
+        if not self.__alive and pygame.time.get_ticks() >= self.__respawn_time:
+            self.respawn()
+
+    def die(self):
+        """Bob stirbt und wird nach 20 Sekunden neu gespawnt."""
+        self.__alive = False
+        self.__respawn_time = pygame.time.get_ticks() + 20000  # 20 Sekunden warten
+        print("[DEBUG] Bob ist gestorben! Er kommt in 20 Sekunden zurück.")
+
+    def draw(self, surface):
+        """Zeichnet Bob auf dem Spielfeld."""
+        for index, pos in enumerate(self.__positions):
+            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+            color = (0, 0, 255) if index == 0 else (100, 100, 255)  # 🔵 Blau für Bob
+            pygame.draw.rect(surface, color, r)
+            pygame.draw.rect(surface, (93, 216, 228), r, 1)  # Rand für Sichtbarkeit
+
+
 # === Apfel-Klasse ===
 class Apple:
     def __init__(self, count=1, snake=None):
@@ -328,7 +403,7 @@ class Apple:
             if new_position not in self.__positions and new_position not in self.snake.get_positions():
                 self.__positions.append(new_position)
 
-    def relocate_apple(self, snake, obstacles):
+    def relocate_apple(self, snake, obstacles,bot_snake):
         """Platziert den Apfel an eine neue zufällige Stelle, die nicht von der Schlange oder Hindernissen besetzt ist."""
         while True:
             x_pos = random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size
@@ -336,7 +411,7 @@ class Apple:
             new_position = (x_pos, y_pos)
 
             # ✅ Sicherstellen, dass die neue Position nicht auf der Schlange oder einem Hindernis liegt
-            if new_position not in snake.get_positions() and new_position not in obstacles.get_positions():
+            if new_position not in snake.get_positions() and new_position not in bot_snake.get_positions() and new_position not in obstacles.get_positions():
                 self.__positions = [new_position]
                 break  # ✅ Gültige Position gefunden, Schleife beenden
 
@@ -490,6 +565,7 @@ class SnakeGame:
         self.__screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
         self.__surface = pygame.Surface(self.__screen.get_size()).convert()
         self.__snake = Snake()
+        self.__bot_snake = BotSnake()  # 🆕 Bob hinzufügen
         self.__apple = Apple(count=1, snake=self.__snake)
         self.__my_font = pygame.font.SysFont("monospace", 16)
         self.__running = True  # Flag für Spielstatus
@@ -591,6 +667,32 @@ class SnakeGame:
                 print("[DEBUG] Apfel wurde von einem Hindernis getroffen! Neuer Apfel erscheint.")
                 self.__apple.relocate_apple(self.__snake, self.__obstacles)
 
+        # 🛑 Falls Bob ein Hindernis trifft → Bob stirbt!
+        if self.__bot_snake.get_head_position() in self.__obstacles.get_positions():
+            print("[DEBUG] Bob hat ein Hindernis getroffen!")
+            self.__bot_snake.die()
+
+        # 💀 Falls Bob sich selbst trifft → Bob stirbt!
+        if self.__bot_snake.get_head_position() in self.__bot_snake.get_positions()[1:]:
+            print("[DEBUG] Bob hat sich selbst getroffen!")
+            self.__bot_snake.die()
+
+        # 🔴 Falls Bob den Spieler trifft → Bob stirbt!
+        if self.__bot_snake.get_head_position() in self.__snake.get_positions():
+            print("[DEBUG] Bob hat den Spieler getroffen!")
+            self.__bot_snake.die()
+
+        # 🔴 Falls Bob den Spieler trifft → Bob stirbt!
+        if self.__bot_snake.get_head_position() in self.__snake.get_positions():
+            print("[DEBUG] Bob hat den Spieler getroffen!")
+            self.__bot_snake.die()
+
+        if self.__bot_snake.get_head_position() in self.__apple.get_positions():
+            self.__apple.relocate_apple(self.__snake, self.__obstacles, self.__bot_snake)
+            print("Apfel Gesammelt")
+
+
+
     def __update_effects(self):
         current_time = pygame.time.get_ticks()
 
@@ -633,6 +735,8 @@ class SnakeGame:
     def main_loop(self):
         while self.__running:
             self.__clock.tick(10)
+            self.__bot_snake.move_towards_apple(self.__apple)
+            self.__bot_snake.check_respawn()  # 🆕 Falls Bob tot ist, prüfe Respawn
             self.__handle_keys()
             self.__snake.move()
             self.__check_collisions()
@@ -689,6 +793,7 @@ class SnakeGame:
         self.__screen.fill((0, 0, 0))
         self.__apple.draw(self.__screen)
         self.__snake.draw(self.__screen)
+        self.__bot_snake.draw(self.__screen)  # 🆕 Bob zeichnen
         self.__obstacles.draw(self.__screen)
 
     def __update_screen(self):
