@@ -1,11 +1,12 @@
-from .settings import Settings  # ✅ Importiere Settings richtig!
 from .gamecolors import GameColors
+from .settings import Settings
 import random
 import pygame
 
 
 class Snake:
     def __init__(self, start_pos=None, name="Player"):
+
         """Erstellt eine Schlange mit einer individuellen Startposition und Steuerung."""
         if start_pos is None:
             start_pos = (Settings.screen_width / 2, Settings.screen_height / 2)
@@ -17,6 +18,7 @@ class Snake:
         self.__speed = 10
         self.__double_points = False
         self.__flash_time = None
+
         self.__original_color = GameColors.BODY_COLOR
         self.__color = self.__original_color  # Standardfarbe setzen
 

@@ -1,7 +1,8 @@
 import pygame
-from game.settings import Settings
+
 
 def handle_snake_input(events, snake):
+    from game.settings import Settings
     """Verarbeitet die Steuerung der Schlange mit den Pfeiltasten oder WASD."""
     for event in events:
         if event.type == pygame.KEYDOWN:

@@ -1,7 +1,6 @@
 import random
-from .settings import Settings
-from .bot import BotSnake
 import pygame
+from .settings import Settings
 
 
 class Obstacle:
@@ -12,6 +11,7 @@ class Obstacle:
 
         # 🛑 Zufällige Hindernisse auf dem Spielfeld platzieren
         for _ in range(self.__count):
+
             x_pos = random.randint(0, int(Settings.grid_width) - 1) * Settings.grid_size
             y_pos = random.randint(0, int(Settings.grid_height) - 1) * Settings.grid_size
             self.__positions.append((x_pos, y_pos))
@@ -89,6 +89,7 @@ class HunterObstacle:
             self.__speed = 1  # 🏃‍♂️ Zur normalen Geschwindigkeit zurückkehren
 
     def set_target(self, target):
+        from .bot import BotSnake
         """Setzt das Ziel für den Hunter (z.B. Bob oder den Spieler)."""
         if isinstance(target, BotSnake) and not target.is_alive():
             return  # ❌ Falls Bob tot ist, ignoriere ihn als Ziel

@@ -1,11 +1,13 @@
 import pygame
 import random
 import sys
+from ui.inputs import get_player_name
+from . import update_highscore, save_score
 from .snake import Snake
 from .settings import Settings
 from .bot import BotSnake
-from apple import Apple, FakeApple,SuperApple,ReverseApple,SugarApple,MegaApple
-from obstacles import HunterObstacle, Obstacle
+from .apple import Apple, FakeApple,SuperApple,ReverseApple,SugarApple,MegaApple
+from .obstacles import HunterObstacle, Obstacle
 from.playerinputs import handle_snake_input
 
 
@@ -311,6 +313,8 @@ class SnakeGame:
         self.__obstacles.draw(self.__screen)
         for hunter in self.__hunter_obstacle:  # 🔥 Beide Jäger zeichnen!
             hunter.draw(self.__screen)
+
+
 
     def __update_screen(self):
         # 🎮 Score-Text definieren
