@@ -1,8 +1,7 @@
 import pygame
 import random
 import sys
-from ui.inputs import get_player_name
-from . import update_highscore, save_score
+
 from .snake import Snake
 from .settings import Settings
 from .bot import BotSnake
@@ -18,6 +17,7 @@ class SnakeGame:
         self.__clock = pygame.time.Clock()
         self.__screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
         self.__surface = pygame.Surface(self.__screen.get_size()).convert()
+        self.__hunter_obstacle = [HunterObstacle(), HunterObstacle()]  # Initialisierung
         self.__snake = Snake()
         self.__bob = BotSnake()  # 🆕 Bob hinzufügen
         self.__apple = Apple(count=1, snake=self.__snake)
@@ -25,7 +25,6 @@ class SnakeGame:
         self.__running = True  # Flag für Spielstatus
         self.__apple = Apple(count=1, snake=self.__snake)  # Standard-Apfel
         self.__obstacles = Obstacle(count=3)
-        self.__hunter_obstacle = [HunterObstacle(), HunterObstacle()]  # Initialisierung
 
         # 🆕 Spezielle Effekte
         self.__double_points_end_time = None
@@ -63,8 +62,11 @@ class SnakeGame:
         return self.__snake.get_score() >= 50 and random.randint(1, 10) == 1  # 10% Wahrscheinlichkeit
 
     def __positions_overlap(self, pos1, pos2):
-        """Prüft, ob zwei Positionen sich genau oder fast genau überlappen."""
-        return abs(pos1[0] - pos2[0]) < Settings.grid_size and abs(pos1[1] - pos2[1]) < Settings.grid_size
+        """Prüft, ob zwei Positionen sich genau überlappen."""
+        overlap_x = abs(pos1[0] - pos2[0]) < (Settings.grid_size // 2)  # Genauere Toleranz
+        overlap_y = abs(pos1[1] - pos2[1]) < (Settings.grid_size // 2)
+
+        return overlap_x and overlap_y
 
     def __check_collisions(self):
         """Prüft, ob die Schlange (und optional eine zweite) eine Kollision hat."""
@@ -170,16 +172,15 @@ class SnakeGame:
             for hunter in self.__hunter_obstacle:  # 🔥 Beide Hindernisse aktualisieren ihr Ziel
                 hunter.set_target(self.__bob)
 
-                # 🛑 Wenn Bob mit einem Hunter kollidiert (egal welcher Körperteil)
-                for segment in self.__bob.get_positions():
-                    for hunter in self.__hunter_obstacle:  # ✅ Stelle sicher, dass alle Hunter überprüft werden
-                        hunter_pos = hunter.get_position()
+                # 🛑 Wenn ein Hunter die Schlange trifft (aber nur noch, wenn der Kopf getroffen wird)
+                for hunter in self.__hunter_obstacle:
+                    hunter_pos = hunter.get_position()
 
-                        if self.__positions_overlap(hunter_pos, segment):
-                            print("[DEBUG] Hunter hat Bob erwischt! Bob stirbt!")
-                            self.__bob.die()
-                            hunter_hit = hunter  # ✅ Speichert das `HunterObstacle`-Objekt
-                            break  # ⛔ Verhindert doppelte Treffer
+                    # 💀 Prüfen, ob der Kopf getroffen wurde
+                    if self.__positions_overlap(hunter_pos, self.__snake.get_head_position()):
+                        print("[DEBUG] Hunter hat den Spieler-Kopf getroffen! GAME OVER!")
+                        self.__running = False
+                        return  # ✅ Spiel sofort beenden
 
                 # 🔥 Wenn ein Hunter Bob getroffen hat, respawnen ALLE Hunter
                 if hunter_hit is not None:
@@ -187,25 +188,7 @@ class SnakeGame:
                         h.clear_target()
                         h.respawn()
 
-            # 🛑 Wenn ein Hunter die Schlange trifft (egal welcher Körperteil)
-            for segment in self.__snake.get_positions():
-                for hunter in self.__hunter_obstacle:
-                    hunter_pos = hunter.get_position()
 
-                    if self.__positions_overlap(hunter_pos, segment):
-                        # 💀 Falls der Kopf getroffen wird → Game Over
-                        if segment == self.__snake.get_head_position():
-                            print("[DEBUG] Hunter hat den Spieler-Kopf getroffen! GAME OVER!")
-                            self.__running = False
-                        else:
-                            # 🟡 Falls ein Körperteil getroffen wird → Länge um 1 reduzieren
-                            print("[DEBUG] Hunter hat ein Körperteil der Schlange getroffen! Länge -1")
-                            self.__snake.reduce_length(1)
-
-                            # ❗ Falls nur noch 1 Segment übrig ist → Game Over
-                            if len(self.__snake.get_positions()) == 1:
-                                print("[DEBUG] Schlange ist zu klein! GAME OVER!")
-                                self.__running = False
 
         # 🍏 Hunter trifft Apfel (BOOST!)
         for hunter in self.__hunter_obstacle:
@@ -267,43 +250,57 @@ class SnakeGame:
             if self.__countdown_time <= 0:
                 self.__running = False
 
-        print("Game Over: Zeit abgelaufen!")  # Debugging
         final_score, back_to_menu, new_name = self.show_game_over_screen()
         return final_score, back_to_menu, new_name
 
     def show_game_over_screen(self):
-        """Zeigt den Game Over Bildschirm mit der Möglichkeit, mit dem gleichen Namen weiterzuspielen."""
-        font = pygame.font.SysFont("monospace", 30)
+        """Zeigt den Game Over Bildschirm mit Animation & schönerem Design."""
+        font_large = pygame.font.SysFont("monospace", 50, bold=True)
+        font_small = pygame.font.SysFont("monospace", 25)
+
         final_score = self.__snake.get_score()
+        blink = True  # Für blinkenden Text
+        blink_timer = 0  # Zeit für Blinken
 
         while True:
-            self.__screen.fill((0, 0, 0))
+            self.__screen.fill((30, 30, 30))  # 🎨 Dunkelgrauer Hintergrund für einen besseren Look
 
-            # 🎮 Game Over Nachricht
-            text1 = font.render("GAME OVER", True, (255, 0, 0))
-            text2 = font.render(f"Score: {final_score}", True, (255, 255, 255))
-            text3 = font.render("Enter: Neustart | N: Neuer Name | M: Menü", True, (200, 200, 200))
-
+            # 🔴 Game Over Text
+            text1 = font_large.render("GAME OVER", True, (255, 50, 50))
             self.__screen.blit(text1, (Settings.screen_width // 2 - text1.get_width() // 2, 100))
-            self.__screen.blit(text2, (Settings.screen_width // 2 - text2.get_width() // 2, 160))
-            self.__screen.blit(text3, (Settings.screen_width // 2 - text3.get_width() // 2, 220))
+
+            # 🏆 Score Anzeige
+            text2 = font_small.render(f"Score: {final_score}", True, (255, 255, 255))
+            self.__screen.blit(text2, (Settings.screen_width // 2 - text2.get_width() // 2, 170))
+
+            # ✨ Blinkender Hinweis (alle 500ms)
+            current_time = pygame.time.get_ticks()
+            if current_time - blink_timer > 500:  # Blinkt alle 500ms
+                blink = not blink
+                blink_timer = current_time
+
+            if blink:
+                text_blink = font_small.render("Drücke eine Taste", True, (255, 255, 100))
+                self.__screen.blit(text_blink, (Settings.screen_width // 2 - text_blink.get_width() // 2, 230))
+
+            # 🎮 Menüoptionen
+            text3 = font_small.render("Enter: Neustart | N: Neuer Name | M: Menü", True, (200, 200, 200))
+            self.__screen.blit(text3, (Settings.screen_width // 2 - text3.get_width() // 2, 300))
 
             pygame.display.flip()
 
+            # 🕹️ Event Handling für Eingaben
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:  # 🎮 Mit gleichem Namen weiterspielen
-                        print(f"Spiel wird mit {self.__player_name} neugestartet...")
-                        return final_score, False, self.__player_name  # Gleiches Spiel, gleicher Name
-                    elif event.key == pygame.K_n:  # ✏️ Neuer Name wählen
-                        print("Neuen Namen eingeben...")
-                        return final_score, False, None  # Name muss neu eingegeben werden
-                    elif event.key == pygame.K_m:  # 🏠 Zurück ins Menü
-                        print("Zurück ins Menü.")
-                        return final_score, True, None  # Spieler geht ins Menü zurück
+                    if event.key == pygame.K_RETURN:  # Neustart
+                        return final_score, False, None
+                    elif event.key == pygame.K_n:  # Neuer Name wählen
+                        return final_score, False, "new_name"
+                    elif event.key == pygame.K_m:  # Zurück zum Menü
+                        return final_score, True, None
 
     def __draw_objects(self):
         self.__screen.fill((0, 0, 0))
