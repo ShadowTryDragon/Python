@@ -171,13 +171,18 @@ class ChaosMode:
             if pos == head_pos:
                 print("[CHAOS] 💀 Du bist gegen ein Hindernis gestoßen! GAME OVER!")
                 self.__running = False
-            # ✅ Kollisionscheck mit Minen
-            for mine in self.__mines:
-                if mine.get_position() == head_pos:
-                    mine.trigger_explosion()  # 🔥 Explosion starten!
-                    pygame.time.delay(1000)  # ⏳ 1 Sekunde warten
-                    print("[💀] BOOM! Schlange explodiert!")
-                    self.__running = False  # ❌ Spiel beenden!
+
+                # ✅ Kollisionscheck mit Minen
+                for mine in self.__mines:
+                    if mine.get_position() == head_pos:
+                        mine.trigger_explosion()  # 🔥 Explosion starten!
+
+                # ✅ Aktualisiere Minenstatus nach der Bewegung
+                for mine in self.__mines[:]:  # Durch eine Kopie iterieren, um sicher zu entfernen
+                    explosion = mine.update(self.__snake)
+                    if explosion == "explode":
+                        print("[💀] BOOM! Spieler getroffen! GAME OVER!")
+                        self.__running = False  # ❌ Spiel beenden!
 
         # ✅ Apfel essen (Falls der Kopf auf einem Apfel landet)
         if self.__apple and head_pos in self.__apple.get_positions():
@@ -205,7 +210,7 @@ class ChaosMode:
 
             # ✅ Minen korrekt zeichnen
             for mine in self.__mines:
-                mine.update()  # 🔄 Blinken aktualisieren
+                mine.update(self.__snake)  # 🔄 Blinken aktualisieren & Explosion prüfen
                 mine.draw(self.__screen)
 
         self.__snake.draw(self.__screen)

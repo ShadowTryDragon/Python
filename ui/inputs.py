@@ -55,7 +55,6 @@ def get_player_name(screen, sys=None):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and name and not is_name_taken(name):
                     return name  # ✅ Name zurückgeben
