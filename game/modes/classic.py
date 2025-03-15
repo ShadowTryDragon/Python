@@ -2,9 +2,9 @@ import sys
 import pygame
 
 from ui.inputs import get_player_name
-from .snake import Snake
-from .settings import Settings
-from .database import save_classic_score
+from game.objects.snake import Snake
+from game.settings import Settings
+from game.database import save_classic_score
 
 
 class ClassicSnakeGame:

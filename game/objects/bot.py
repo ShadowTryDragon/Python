@@ -1,6 +1,6 @@
 import random
 import pygame
-from .settings import Settings
+from game.settings import Settings
 
 
 
@@ -12,9 +12,9 @@ class BotSnake:
         self.__alive = True
         self.__respawn_time = None
         self.__stuck_time = None
-        from .obstacles import HunterObstacle
+        from game.objects.obstacles import HunterObstacle
         self.__hunter_obstacle = [HunterObstacle() for _ in range(2)]  # 3 Jäger
-        from .snake import Snake
+        from game.objects.snake import Snake
         self.__snake = Snake()  # ✅ Jetzt existiert `self.__snake`
 
         print(f"DEBUG: Bob initialisiert mit Position {self.__positions}")

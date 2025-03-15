@@ -1,6 +1,6 @@
 import random
 import pygame
-from .settings import Settings
+from game.settings import Settings
 
 
 class Obstacle:
@@ -18,6 +18,12 @@ class Obstacle:
 
             # 🏃‍♂️ Zufällige Bewegungsrichtung setzen
             self.__directions.append(random.choice(Settings.directions))
+
+    def add_obstacle(self, x, y):
+        """Fügt ein neues Hindernis hinzu"""
+        self.__positions.append((x, y))
+        self.__directions.append(random.choice(Settings.directions))  # Zufällige Richtung
+        print(f"[DEBUG] Neues Hindernis bei {x}, {y} hinzugefügt!")
 
     def move(self):
         """Bewegt die Hindernisse zufällig über das Spielfeld."""

@@ -2,7 +2,7 @@ import os
 
 import pygame
 from pygame.math import lerp
-
+from game.modes.chaos_mode import ChaosMode
 from game.settings import Settings
 
 class Menu:
@@ -10,7 +10,7 @@ class Menu:
         self.screen = screen
         self.font = pygame.font.SysFont("monospace", 40, bold=True)
         self.title_font = pygame.font.SysFont("monospace", 60, bold=True)
-        self.options = ["🎮 Start Game", "🏆 Classic Mode", "📜 Bestenliste", "❌ Beenden"]
+        self.options = ["Start Game", "Classic Mode", "Chaos Mode", "Bestenliste", "Beenden"]
         self.selected = 0
         self.bg_color = [30, 30, 30]  # 🌑 Dunkler Hintergrund als Liste (RGB)
         self.color_direction = [1, 1, 1]  # Für die Farbänderung
@@ -26,6 +26,7 @@ class Menu:
         for option, filename in {
             "Start Game": "start_game.png",
             "Classic Mode": "classic_mode.png",
+            "Chaos Mode": "chaos_mode.png",
             "Bestenliste": "highscores.png",
             "Beenden": "exit.png"
         }.items():
@@ -84,13 +85,13 @@ class Menu:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return 3  # Beenden
+                return 4  # Beenden
             elif event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_DOWN, pygame.K_s]:
                     self.selected = (self.selected + 1) % len(self.options)
                 elif event.key in [pygame.K_UP, pygame.K_w]:
                     self.selected = (self.selected - 1) % len(self.options)
                 elif event.key == pygame.K_RETURN:
-                    return self.selected
+                    return self.selected  # ✅ Gibt die gewählte Option zurück
 
         return None

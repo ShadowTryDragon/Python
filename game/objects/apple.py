@@ -6,15 +6,22 @@ from game.gamecolors import GameColors  # ✅ Falls GameColors in einer separate
 
 
 class Apple:
-    def __init__(self, count=1, snake=None):
+    def __init__(self, count=1, snake=None, moving=False):
         self.__positions = []
         self.__count = count
         self.__color = GameColors.APPLE_COLOR
         self.snake = snake
         self.randomize_positions()
+        self.__moving = moving  # ✅ Speichern, ob Apfel sich bewegt
 
     def get_positions(self):
         return self.__positions
+
+    def move(self):
+        """Bewegt den Apfel zufällig, falls `moving` aktiv ist."""
+        if self.__moving:
+            self.randomize_positions()
+            print("[DEBUG] 🍏 Der Apfel bewegt sich!")
 
     def randomize_positions(self):
         self.__positions = []

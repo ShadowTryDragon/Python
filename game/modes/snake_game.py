@@ -2,12 +2,12 @@ import pygame
 import random
 import sys
 
-from .snake import Snake
-from .settings import Settings
-from .bot import BotSnake
-from .apple import Apple, FakeApple,SuperApple,ReverseApple,SugarApple,MegaApple
-from .obstacles import HunterObstacle, Obstacle
-from.playerinputs import handle_snake_input
+from game.objects.snake import Snake
+from game.settings import Settings
+from game.objects.bot import BotSnake
+from game.objects.apple import Apple, FakeApple,SuperApple,ReverseApple,SugarApple,MegaApple
+from game.objects.obstacles import HunterObstacle, Obstacle
+from game.playerinputs import handle_snake_input
 
 
 class SnakeGame:

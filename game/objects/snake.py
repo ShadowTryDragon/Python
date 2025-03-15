@@ -1,5 +1,5 @@
-from .gamecolors import GameColors
-from .settings import Settings
+from game.gamecolors import GameColors
+from game.settings import Settings
 import random
 import pygame
 
@@ -18,9 +18,15 @@ class Snake:
         self.__speed = 10
         self.__double_points = False
         self.__flash_time = None
+        self.__invisible = False  # ✅ Neue Variable für Unsichtbarkeit
 
         self.__original_color = GameColors.BODY_COLOR
         self.__color = self.__original_color  # Standardfarbe setzen
+
+    def set_invisible(self, state: bool):
+        """Schaltet die Unsichtbarkeit der Schlange ein oder aus."""
+        self.__invisible = state
+        print(f"[DEBUG] Unsichtbarkeit: {'AN' if state else 'AUS'}")
 
     def is_alive(self):
         return True  # Snake stirbt nie, daher immer True
@@ -91,12 +97,10 @@ class Snake:
     def get_score(self):
         return self.__score
 
-    def draw(self, surface, color=None):
-        """Zeichnet die Schlange auf den Bildschirm."""
-        if color is None:
-            color = self.__color
-
-        for index, pos in enumerate(self.__positions):
-            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
-            pygame.draw.rect(surface, color if index else GameColors.HEAD_COLOR, r)
-            pygame.draw.rect(surface, (93, 216, 228), r, 1)
+    def draw(self, surface):
+        """Zeichnet die Schlange (unsichtbar oder sichtbar)."""
+        if not self.__invisible:  # ✅ Falls unsichtbar, nicht zeichnen
+            for index, pos in enumerate(self.__positions):
+                r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+                pygame.draw.rect(surface, self.__color if index else GameColors.HEAD_COLOR, r)
+                pygame.draw.rect(surface, (93, 216, 228), r, 1)
