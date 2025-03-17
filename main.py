@@ -1,3 +1,5 @@
+import os
+
 import pygame
 
 from game.modes.chaos_mode import ChaosMode
@@ -9,7 +11,19 @@ from game.modes.snake_game import SnakeGame
 from game.modes.classic import start_classic_mode
 
 
+def play_music(music_path):
+    """Spielt eine Hintergrundmusik in Dauerschleife."""
+    if not os.path.exists(music_path):  # Falls Datei fehlt, Debug-Warnung
+        print(f"[ERROR] ❌ Musikdatei nicht gefunden: {music_path}")
+        return
+
+    pygame.mixer.init()  # 🎵 Mixer initialisieren (nur 1x nötig!)
+    pygame.mixer.music.load(music_path)
+    pygame.mixer.music.set_volume(0.5)  # 🎧 Lautstärke anpassen (0.0 - 1.0)
+    pygame.mixer.music.play(-1)  # 🔄 Dauerschleife (-1)
+
 def start_game(screen):
+    play_music("game/audio/game_music.mp3")
     """Startet das Spiel mit übergebenem `screen`."""
     player_name = get_player_name(screen)  # ✅ `screen` direkt übergeben
 
