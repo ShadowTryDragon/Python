@@ -2,11 +2,11 @@ import pygame
 import random
 
 from game.objects.mine import Mine
-from game.settings import Settings
+from game.setting.settings import Settings
 from game.objects.snake import Snake
 from game.objects.apple import Apple
 from game.objects.obstacles import Obstacle
-from game.playerinputs import handle_snake_input
+from game.setting.playerinputs import handle_snake_input
 
 class ChaosMode:
     def __init__(self, player_name):
