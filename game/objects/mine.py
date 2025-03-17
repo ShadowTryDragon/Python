@@ -1,6 +1,6 @@
 import pygame
 import random
-from game.settings import Settings
+from game.setting.settings import Settings
 
 class Mine:
     def __init__(self, x, y):

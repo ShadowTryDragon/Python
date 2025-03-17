@@ -26,6 +26,7 @@ class SnakeGame:
         self.__apple = Apple(count=1, snake=self.__snake)  # Standard-Apfel
         self.__obstacles = Obstacle(count=3)
 
+
         # 🆕 Spezielle Effekte
         self.__double_points_end_time = None
         self.__speed_boost_end_time = None
@@ -115,12 +116,22 @@ class SnakeGame:
             return
 
         # 🍏 Spieler frisst Apfel
-        if self.__snake.get_head_position() in self.__apple.get_positions():
+        apple_positions = self.__apple.get_positions()  # Direkte Liste nutzen
+
+
+        # 🍏 Spieler frisst Apfel
+        if self.__snake.get_head_position() in apple_positions:
             self.__apple.action(self.__snake)
             self.__collected_apples += 1
-            for hunter in self.__hunter_obstacle:  # 🔥 Beide Hindernisse aktualisieren ihr Ziel
+            self.__apple = Apple(count=1, snake=self.__snake)  # 🆕 Neuer Apfel erscheint
+            for hunter in self.__hunter_obstacle:
                 hunter.set_target(self.__snake)
             print("Apfel Gesammelt")
+
+        if bob_head_position in apple_positions:
+            self.__apple = Apple(count=1, snake=self.__snake)  # 🆕 Neuer Apfel erscheint
+            for hunter in self.__hunter_obstacle:
+                hunter.set_target(self.__bob)
 
             # Spezial-Apfel Timer setzen
             if isinstance(self.__apple, SuperApple):
@@ -154,12 +165,7 @@ class SnakeGame:
                 print("[DEBUG] Apfel wurde von einem Hindernis getroffen! Neuer Apfel erscheint.")
                 self.__apple.relocate_apple(self.__snake, self.__obstacles)
 
-        # 🍏 Bob frisst Apfel
-        if bob_head_position in self.__apple.get_positions():
-            print("DEBUG: Bob hat einen Apfel gefressen!")
-            self.__apple = Apple(count=1, snake=self.__snake)  # 🆕 Neuer Apfel erscheint
-            for hunter in self.__hunter_obstacle:  # 🔥 Beide Hindernisse aktualisieren ihr Ziel
-                hunter.set_target(self.__bob)
+
 
                 # 🛑 Wenn ein Hunter die Schlange trifft (aber nur noch, wenn der Kopf getroffen wird)
                 for hunter in self.__hunter_obstacle:
@@ -172,16 +178,14 @@ class SnakeGame:
                         return  # ✅ Spiel sofort beenden
 
                 # 🏹 Prüfen, ob ein Hunter Bob getroffen hat
-                for hunter in self.__hunter_obstacle:
-                    if self.__positions_overlap(hunter.get_position(), self.__bob.get_positions()[0]):
-                        print("[DEBUG] Hunter hat Bob erwischt! Bob stirbt!")
-                        self.__bob.die()
-
-                        # 🔄 Alle Hunter verlieren ihr Ziel & respawnen
-                        for h in self.__hunter_obstacle:
-                            h.clear_target()
-                            h.respawn()
-
+                hunter_positions = [pos for hunter in self.__hunter_obstacle for pos in hunter.get_positions()]
+                if bob_head_position in set(hunter_positions):
+                    print("[DEBUG] Bob wurde von einem Hindernis getroffen!")
+                    self.__bob.die()
+                    # 🔄 Alle Hunter verlieren ihr Ziel & respawnen
+                    for h in self.__hunter_obstacle:
+                        h.clear_target()
+                        h.respawn()
                         break  # ⛔ Keine weiteren Überprüfungen nötig, sobald Bob getroffen wurde
 
         # 🍏 Hunter trifft Apfel (BOOST!)

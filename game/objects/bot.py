@@ -1,6 +1,7 @@
+
 import random
 import pygame
-from game.settings import Settings
+from game.setting.settings import Settings
 
 
 

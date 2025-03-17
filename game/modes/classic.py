@@ -1,10 +1,10 @@
 import sys
 import pygame
 
-from ui.inputs import get_player_name
+from game.ui.inputs import get_player_name
 from game.objects.snake import Snake
-from game.settings import Settings
-from game.database import save_classic_score
+from game.setting.settings import Settings
+from game.setting.database import save_or_update_score
 
 
 class ClassicSnakeGame:
@@ -88,7 +88,8 @@ def start_classic_mode():
     final_score = game.main_loop()  # 🎮 Startet das Spiel!
 
     if final_score is not None:  # ✅ Falls Score existiert, speichern
-        save_classic_score(player_name, final_score)
+        save_or_update_score(player_name, final_score, mode="classic")
+
 
     print(f"DEBUG: Classic Mode beendet. Endpunktzahl: {final_score}")  # Debugging
 

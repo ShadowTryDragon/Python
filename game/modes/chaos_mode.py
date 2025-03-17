@@ -1,5 +1,10 @@
+import os
+import time
+
 import pygame
 import random
+import numpy as np
+import pygame.sndarray
 
 from game.objects.mine import Mine
 from game.setting.settings import Settings
@@ -23,6 +28,47 @@ class ChaosMode:
         self.__speed_boost_active = False
         self.__slow_motion_active = False
         self.__reverse_active = False
+        # 🎵 Musik & FFT-Daten vorbereiten
+        from main import play_music
+        play_music("game/audio/chaos_music.mp3")
+
+        self.fft_data = None  # 🛑 Hier speichern wir die FFT-Werte
+        self.bg_color = [30, 30, 30]  # 🌑 Startfarbe dunkel
+
+    import os
+
+    def play_music(music_path):
+        """Spielt die Hintergrundmusik und ermöglicht Bass-Analyse."""
+        if not os.path.exists(music_path):
+            print(f"[ERROR] ❌ Musikdatei nicht gefunden: {music_path}")
+            return
+
+        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)  # Kleinere Buffer für Echtzeit-Analyse
+        pygame.mixer.music.load(music_path)
+        pygame.mixer.music.set_volume(0.7)
+        pygame.mixer.music.play(-1)
+
+    def analyze_audio(self):
+        """Analysiert den Sound nur alle 100ms, um Lags zu vermeiden."""
+        current_time = time.time()
+        if hasattr(self, 'last_audio_check') and (current_time - self.last_audio_check) < 0.1:
+            return  # 🛑 Nur alle 100ms aktualisieren!
+
+        self.last_audio_check = current_time  # Zeit aktualisieren
+
+        try:
+            sound_array = pygame.sndarray.array(pygame.mixer.Sound("game/audio/chaos_music.mp3"))
+            fft_result = np.fft.fft(sound_array)
+            bass_amplitude = np.abs(fft_result[:100]).mean()
+
+            bass_factor = min(max(bass_amplitude / 500000, 0), 1)
+            self.bg_color = [
+                int(255 * bass_factor),
+                int(50 + 100 * bass_factor),
+                int(50 + 150 * bass_factor)
+            ]
+        except Exception as e:
+            print(f"[ERROR] ❌ Audio-Analyse-Fehler: {e}")
 
     def trigger_random_event(self):
         """Löst ein zufälliges Ereignis aus und setzt Timer für die Deaktivierung"""
@@ -33,8 +79,9 @@ class ChaosMode:
             print("[CHAOS] 🌪 Tornado! Alle Äpfel neu platziert!")
             self.__apple.randomize_positions()
 
+
         elif event_type == "meteor":
-            num_obstacles = random.randint(2, 6)
+            num_obstacles = min(random.randint(2, 6), 10)  # ✅ Maximal 10 Hindernisse!
             print(f"[CHAOS] 🌠 Meteor! {num_obstacles} neue Hindernisse erscheinen!")
 
             for _ in range(num_obstacles):
@@ -61,12 +108,14 @@ class ChaosMode:
             pygame.time.set_timer(pygame.USEREVENT + 3, 5000,
                                   loops=1)  # ✅ Normalgeschwindigkeit nach 5 Sekunden wiederherstellen
 
+
         elif event_type == "mines":
-            print("[CHAOS] 💣 Minen erscheinen auf dem Spielfeld!")
-            for _ in range(5):
-                x = random.randint(0, Settings.grid_width - 1) * Settings.grid_size
-                y = random.randint(0, Settings.grid_height - 1) * Settings.grid_size
-                self.__mines.append(Mine(x, y))
+            if len(self.__mines) < 10:  # ✅ Maximal 10 Minen erlauben!
+                print("[CHAOS] 💣 Minen erscheinen auf dem Spielfeld!")
+                for _ in range(5):
+                    x = random.randint(0, Settings.grid_width - 1) * Settings.grid_size
+                    y = random.randint(0, Settings.grid_height - 1) * Settings.grid_size
+                    self.__mines.append(Mine(x, y))
             pygame.time.set_timer(pygame.USEREVENT + 7, 20000, loops=1)  # ✅ Minen nach 20 Sekunden entfernen
 
         elif event_type == "reverse":
@@ -124,13 +173,17 @@ class ChaosMode:
                     pygame.time.set_timer(pygame.USEREVENT + 3, 0)
                     pygame.event.clear(pygame.USEREVENT + 3)
 
-                elif event.type == pygame.USEREVENT + 4:  # ✅ Steuerung normalisieren
+
+                elif event.type == pygame.USEREVENT + 4:  # Steuerung zurücksetzen
+
                     print("[CHAOS] 🔄 Reverse-Steuerung beendet!")
+
                     Settings.left, Settings.right = (-1, 0), (1, 0)
+
                     Settings.up, Settings.down = (0, -1), (0, 1)
-                    self.__reverse_active = False
-                    pygame.time.set_timer(pygame.USEREVENT + 4, 0)
-                    pygame.event.clear(pygame.USEREVENT + 4)
+
+                    pygame.time.set_timer(pygame.USEREVENT + 4, 0)  # ✅ Timer deaktivieren
+
 
                 elif event.type == pygame.USEREVENT + 5:  # ✅ Äpfel wieder generieren
                     print("[CHAOS] 🍏 Äpfel sind wieder da!")
@@ -195,24 +248,23 @@ class ChaosMode:
             self.__apple.randomize_positions()
 
     def __draw_objects(self):
-        """Zeichnet Spielfeld-Elemente"""
-        self.__screen.fill((0, 0, 0))
+        """Zeichnet alle Spielobjekte mit Bass-gesteuertem Hintergrund."""
+        self.analyze_audio()  # 🎚 Hintergrundfarbe aktualisieren
+        self.__screen.fill(tuple(map(int, self.bg_color)))  # 🎨 Neue Farbe setzen
 
         if self.__apple:
             self.__apple.draw(self.__screen)
 
-
-        # ✅ Richtige Hindernis-Darstellung
         for pos in self.__obstacle.get_positions():
             r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
             pygame.draw.rect(self.__screen, (255, 0, 0), r)  # 🔴 Hindernisse rot
             pygame.draw.rect(self.__screen, (0, 0, 0), r, 2)  # 🖤 Schwarzer Rand
 
-            # ✅ Minen korrekt zeichnen
-            for mine in self.__mines:
-                mine.update(self.__snake)  # 🔄 Blinken aktualisieren & Explosion prüfen
-                mine.draw(self.__screen)
+        for mine in self.__mines:
+            mine.update(self.__snake)  # 🔄 Blinken & Explosion prüfen
+            mine.draw(self.__screen)
 
         self.__snake.draw(self.__screen)
         pygame.display.flip()
+
 
