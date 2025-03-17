@@ -2,8 +2,7 @@ import os
 
 import pygame
 from pygame.math import lerp
-from game.modes.chaos_mode import ChaosMode
-from game.settings import Settings
+from game.setting.settings import Settings
 
 class Menu:
     def __init__(self, screen):
