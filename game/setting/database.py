@@ -27,14 +27,32 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_score(name, score, mode="normal"):
-    """Speichert den Score in die richtige Tabelle."""
+import sqlite3
+
+def save_or_update_score(name, score, mode="normal"):
+    """Speichert den Score nur, wenn der Name nicht existiert oder wenn der neue Score höher ist."""
     table = "highscores" if mode == "normal" else "classic_highscores"
     conn = sqlite3.connect("highscores.db")
     cursor = conn.cursor()
-    cursor.execute(f"INSERT INTO {table} (name, score) VALUES (?, ?)", (name, score))
+
+    # 🔍 Prüfen, ob der Spieler existiert & seinen Highscore abrufen
+    cursor.execute(f"SELECT score FROM {table} WHERE name = ?", (name,))
+    result = cursor.fetchone()
+
+    if result:
+        current_highscore = result[0]
+        if score > current_highscore:
+            cursor.execute(f"UPDATE {table} SET score = ? WHERE name = ?", (score, name))
+            print(f"[DEBUG] Neuer Highscore für {name}: {score} (alt: {current_highscore})")
+        else:
+            print(f"[DEBUG] Score {score} ist niedriger als Highscore {current_highscore} - kein Update.")
+    else:
+        cursor.execute(f"INSERT INTO {table} (name, score) VALUES (?, ?)", (name, score))
+        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {score} hinzugefügt!")
+
     conn.commit()
     conn.close()
+
 
 def get_highscores(mode="normal"):
     """Holt die Highscores aus der richtigen Tabelle."""
@@ -46,13 +64,6 @@ def get_highscores(mode="normal"):
     conn.close()
     return scores
 
-def save_classic_score(name, score):
-    """Speichert den Spieler-Score für den Classic Mode in die Datenbank."""
-    conn = sqlite3.connect("highscores.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO classic_highscores (name, score) VALUES (?, ?)", (name, score))
-    conn.commit()
-    conn.close()
 
 
 def get_classic_highscores():
@@ -90,26 +101,4 @@ def show_classic_highscores(screen):
 
 
 
-def update_highscore(name, new_score):
-    """Aktualisiert den Highscore eines Spielers, falls der neue Score höher ist."""
-    conn = sqlite3.connect("highscores.db")
-    cursor = conn.cursor()
 
-    # 🔍 Prüfen, ob der Spieler existiert und seinen aktuellen Highscore abrufen
-    cursor.execute("SELECT score FROM highscores WHERE name = ?", (name,))
-    result = cursor.fetchone()
-
-    if result:
-        current_highscore = result[0]
-        if new_score > current_highscore:
-            cursor.execute("UPDATE highscores SET score = ? WHERE name = ?", (new_score, name))
-            print(f"[DEBUG] Neuer Highscore für {name}: {new_score} (alt: {current_highscore})")
-        else:
-            print(f"[DEBUG] Score {new_score} ist niedriger als Highscore {current_highscore} - kein Update.")
-    else:
-        # Falls der Name nicht existiert, sollte er neu gespeichert werden (eigentlich nicht nötig, weil Name geprüft wurde)
-        cursor.execute("INSERT INTO highscores (name, score) VALUES (?, ?)", (name, new_score))
-        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {new_score} hinzugefügt!")
-
-    conn.commit()
-    conn.close()
