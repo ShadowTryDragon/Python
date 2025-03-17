@@ -1,6 +1,6 @@
 import random
 import pygame
-from game.setting.settings import Settings
+from game.settings import Settings
 
 
 class Obstacle:
@@ -8,8 +8,6 @@ class Obstacle:
         self.__positions = []  # Liste mit Hindernis-Positionen
         self.__directions = []  # Richtung für jedes Hindernis
         self.__count = count  # Anzahl der Hindernisse
-        self.__image = pygame.image.load("game/icons/sprites/obstacle.png")  # 🟩 Stelle sicher, dass das Bild existiert!
-        self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
 
         # 🛑 Zufällige Hindernisse auf dem Spielfeld platzieren
         for _ in range(self.__count):
@@ -62,7 +60,9 @@ class Obstacle:
     def draw(self, surface):
         """Zeichnet die Hindernisse auf dem Spielfeld."""
         for pos in self.__positions:
-            surface.blit(self.__image, pos)
+            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
+            pygame.draw.rect(surface, (255, 0, 0), r)  # 🔴 Hindernisse sind rot
+            pygame.draw.rect(surface, (0, 0, 0), r, 2)  # 🖤 Schwarzer Rand für bessere Sichtbarkeit
 
 
 class HunterObstacle:
@@ -75,12 +75,7 @@ class HunterObstacle:
         self.__speed = 1  # 🏃‍♂️ Normale Geschwindigkeit
         self.__boost_end_time = 0  # 🕒 Zeit, wann der Boost endet
         self._last_target_was_bob = False  # ✅ Einfacher Unterstrich → Kein Namens-Mangling!
-        self.__image = pygame.image.load("game/icons/sprites/hunter.png")  # 🏹 Stelle sicher, dass die Datei existiert!
-        self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
 
-    def get_positions(self):
-        """Gibt die aktuelle Position des Hunters als Liste zurück (kompatibel mit `in set()`-Checks)."""
-        return [self.__position]  # 🔄 Gibt eine Liste mit nur einer Position zurück
 
     def respawn(self):
         """Setzt den Hunter an eine zufällige Position zurück."""
@@ -151,4 +146,6 @@ class HunterObstacle:
 
     def draw(self, surface):
         """Zeichnet das Jagd-Hindernis als rotes Quadrat."""
-        surface.blit(self.__image, self.__position)
+        r = pygame.Rect((self.__position[0], self.__position[1]), (Settings.grid_size, Settings.grid_size))
+        pygame.draw.rect(surface, (255, 0, 0), r)  # 🔴 Jäger-Hindernis ist rot
+        pygame.draw.rect(surface, (0, 0, 0), r, 2)  # 🖤 Schwarzer Rand für bessere Sichtbarkeit
