@@ -1,5 +1,6 @@
-from game.gamecolors import GameColors
-from game.settings import Settings
+
+from game.setting.gamecolors import GameColors
+from game.setting.settings import Settings
 import random
 import pygame
 
