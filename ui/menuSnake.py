@@ -14,6 +14,7 @@ class MenuSnake:
         self.move_delay = 5  # 🔄 Die Schlange bewegt sich nur alle X Frames
         self.move_counter = 0  # Zählt Frames, um Bewegung zu steuern
         self.color = (0, 255, 0)  # Schlange ist grün
+        self.counter = 0
 
 
         # ✅ Pfad KORREKT um die Texte herumgelegt:
@@ -61,7 +62,8 @@ class MenuSnake:
 
                 # 🍏 Kollision mit Apfel prüfen
                 if new_head == self.apple.position:
-                    print("[DEBUG] Apfel gefressen!")
+                    print(f"[DEBUG] Apfel gefressen! neuer Stand: {self.counter}")
+                    self.counter += 1
                     self.apple.relocate()  # Apfel neu platzieren
 
         # Falls das Ende des Pfads erreicht wurde, von vorne beginnen
