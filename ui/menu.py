@@ -3,6 +3,7 @@ import os
 import pygame
 from pygame.math import lerp
 from game.setting.settings import Settings
+from game.ui.menuSnake import MenuSnake
 
 class Menu:
     def __init__(self, screen):
@@ -13,6 +14,19 @@ class Menu:
         self.selected = 0
         self.bg_color = [30, 30, 30]  # 🌑 Dunkler Hintergrund als Liste (RGB)
         self.color_direction = [1, 1, 1]  # Für die Farbänderung
+        self.snake_path = [
+            (Settings.screen_width // 2 - 250, 160),
+            (Settings.screen_width // 2 + 250, 160),
+            (Settings.screen_width // 2 + 250, 550),
+            (Settings.screen_width // 2 - 250, 550),
+            (Settings.screen_width // 2 - 250, 160)
+        ]
+
+        # ✅ MenuSnake bekommt jetzt den Pfad als Parameter
+        self.menu_snake = MenuSnake(self.snake_path)
+
+
+
         # 📌 🎨 Icons laden
 
         # 🔍 Debugging: Prüfe, ob der Pfad existiert
@@ -39,6 +53,10 @@ class Menu:
                 except pygame.error as e:
                     print(f"DEBUG: ❌ Fehler beim Laden von {filename}: {e}")
 
+
+
+
+
     def lerp(a, b, t):
         """Hilfsfunktion für lineare Interpolation zwischen zwei Farben."""
         return a + (b - a) * t
@@ -53,7 +71,7 @@ class Menu:
             self.bg_color[i] = int(lerp(30, target_color[i], t))  # Sanfter Farbwechsel
 
     def draw(self):
-        """Zeichnet das Menü mit Icons."""
+        """Zeichnet das Menü mit Icons & animierter Schlange."""
         self.animate_background()
         self.screen.fill(tuple(self.bg_color))  # Hintergrund zuerst zeichnen!
 
@@ -61,16 +79,20 @@ class Menu:
         title_text = self.title_font.render("🐍 Snake Game 🐍", True, (0, 255, 0))
         self.screen.blit(title_text, (Settings.screen_width // 2 - title_text.get_width() // 2, 50))
 
-        # 📌 ZUERST Icons zeichnen
+        # 🐍 Menü-Schlange bewegen & zeichnen
+        self.menu_snake.move()
+        self.menu_snake.draw(self.screen)  # ✅ Jetzt wird sie gezeichnet!
+
+        # 📌 Icons zuerst zeichnen
         for i, option in enumerate(self.options):
             icon_x = Settings.screen_width // 2 - 150
             icon_y = 200 + i * 60
 
             if option in self.icons:
                 icon = pygame.transform.scale(self.icons[option], (40, 40))
-                self.screen.blit(icon, (icon_x - 60, icon_y))  # 🎯 Zeichne Icons zuerst
+                self.screen.blit(icon, (icon_x - 60, icon_y))  # 🎯 Icons werden gezeichnet
 
-        # 📌 DANACH Text zeichnen
+        # 📌 Dann Text über die Icons
         for i, option in enumerate(self.options):
             color = (0, 255, 0) if i == self.selected else (200, 200, 200)
             text = self.font.render(option, True, color)
@@ -78,7 +100,7 @@ class Menu:
             text_y = 200 + i * 60
             self.screen.blit(text, (text_x, text_y))  # 📝 Text über Icons
 
-        pygame.display.flip()
+        pygame.display.flip()  # ✅ Bildschirm aktualisieren, damit die Schlange sichtbar ist!
 
     def handle_keys(self):
         for event in pygame.event.get():
@@ -94,3 +116,8 @@ class Menu:
                     return self.selected  # ✅ Gibt die gewählte Option zurück
 
         return None
+
+
+
+
+
