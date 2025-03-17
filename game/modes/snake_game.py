@@ -3,11 +3,11 @@ import random
 import sys
 
 from game.objects.snake import Snake
-from game.settings import Settings
+from game.setting.settings import Settings
 from game.objects.bot import BotSnake
 from game.objects.apple import Apple, FakeApple,SuperApple,ReverseApple,SugarApple,MegaApple
 from game.objects.obstacles import HunterObstacle, Obstacle
-from game.playerinputs import handle_snake_input
+from game.setting.playerinputs import handle_snake_input
 
 
 class SnakeGame:
@@ -70,63 +70,52 @@ class SnakeGame:
 
     def __check_collisions(self):
         """Prüft, ob die Schlange (und optional eine zweite) eine Kollision hat."""
-
-        head_pos = self.__snake.get_head_position()
-        bob_positions = self.__bob.get_positions()
-        hunter_hit = None  # 🛑 Variable, um zu merken, ob ein Hunter Bob getroffen hat
-
-        # 🛑 Sicherstellen, dass `hunter` und `hunter_pos` immer definiert sind
+        hunter_pos = None
         hunter = None
-        hunter_pos = (0, 0)
 
-        for hunter in self.__hunter_obstacle:  # ✅ `hunter` wird hier sicher definiert
-            hunter_pos = hunter.get_position()  # ✅ `hunter_pos` wird hier sicher definiert
+        # 🏹 Hunter-Kollisionen direkt prüfen, ohne unnötige Initialisierung
+        for hunter in self.__hunter_obstacle:
+            if self.__positions_overlap(hunter.get_position(), self.__snake.get_head_position()):
+                print("[DEBUG] Hunter hat den Spieler-Kopf getroffen! GAME OVER!")
+                self.__running = False
+                return
 
-        # 💀 Selbst-Kollision (Spieler)
-        if head_pos in self.__snake.get_positions()[1:]:
+        # 💀 Selbst-Kollision (Spieler trifft sich selbst)
+        if self.__snake.get_head_position() in self.__snake.get_positions()[1:]:
             print("Game Over: Schlange hat sich selbst getroffen!")
             self.__running = False
             return
 
-        # 💀 Selbst-Kollision (Bob)
-        if bob_positions in self.__bob.get_positions()[1:]:
+        # 💀 Selbst-Kollision (Bob trifft sich selbst)
+        if len(self.__bob.get_positions()) > 1 and self.__bob.get_positions()[0] in self.__bob.get_positions()[1:]:
             print("DEBUG: Bob hat sich selbst getroffen!")
             self.__bob.die()  # Bob stirbt und respawnt später
 
         # 🛑 Spieler trifft auf ein Hindernis
-        if head_pos in self.__obstacles.get_positions():
+        if self.__snake.get_head_position() in self.__obstacles.get_positions():
             print("Game Over: Schlange hat ein Hindernis getroffen!")
             self.__running = False
             return
 
-        # 🛑 Falls ein Hindernis den Körper trifft → Schlange kürzen!
-        for segment in self.__snake.get_positions()[1:]:  # Nur den Körper prüfen, nicht den Kopf
-            if segment in self.__obstacles.get_positions():
-                print("[DEBUG] Hindernis hat die Schlange getroffen! Länge -1")
-                self.__snake.reduce_length(1)
-                # ❗ Falls nur noch 1 Segment übrig ist → Game Over
-                if len(self.__snake.get_positions()) == 1:
-                    print("[DEBUG] Schlange ist zu klein! GAME OVER!")
-                    self.__running = False
-
         # 🛑 Bob trifft auf ein Hindernis
-        if bob_positions in self.__obstacles.get_positions():
+        bob_head_position = self.__bob.get_positions()[0] if self.__bob.get_positions() else None
+        if bob_head_position and bob_head_position in self.__obstacles.get_positions():
             print("DEBUG: Bob hat ein Hindernis getroffen!")
             self.__bob.die()
 
         # 🛑 Bob kollidiert mit dem Spieler
-        if bob_positions in self.__snake.get_positions():
+        if bob_head_position and bob_head_position in self.__snake.get_positions():
             print("DEBUG: Bob kollidiert mit Spieler!")
             self.__bob.die()
 
         # 🛑 Spieler trifft auf Bob
-        if head_pos in self.__bob.get_positions():
+        if self.__snake.get_head_position() in self.__bob.get_positions():
             print("Game Over: Spieler kollidiert mit Bob!")
             self.__running = False
             return
 
         # 🍏 Spieler frisst Apfel
-        if head_pos in self.__apple.get_positions():
+        if self.__snake.get_head_position() in self.__apple.get_positions():
             self.__apple.action(self.__snake)
             self.__collected_apples += 1
             for hunter in self.__hunter_obstacle:  # 🔥 Beide Hindernisse aktualisieren ihr Ziel
@@ -166,7 +155,7 @@ class SnakeGame:
                 self.__apple.relocate_apple(self.__snake, self.__obstacles)
 
         # 🍏 Bob frisst Apfel
-        if bob_positions and bob_positions[0] in self.__apple.get_positions():
+        if bob_head_position in self.__apple.get_positions():
             print("DEBUG: Bob hat einen Apfel gefressen!")
             self.__apple = Apple(count=1, snake=self.__snake)  # 🆕 Neuer Apfel erscheint
             for hunter in self.__hunter_obstacle:  # 🔥 Beide Hindernisse aktualisieren ihr Ziel
@@ -182,13 +171,18 @@ class SnakeGame:
                         self.__running = False
                         return  # ✅ Spiel sofort beenden
 
-                # 🔥 Wenn ein Hunter Bob getroffen hat, respawnen ALLE Hunter
-                if hunter_hit is not None:
-                    for h in self.__hunter_obstacle:  # ✅ Respawn für alle Hunter
-                        h.clear_target()
-                        h.respawn()
+                # 🏹 Prüfen, ob ein Hunter Bob getroffen hat
+                for hunter in self.__hunter_obstacle:
+                    if self.__positions_overlap(hunter.get_position(), self.__bob.get_positions()[0]):
+                        print("[DEBUG] Hunter hat Bob erwischt! Bob stirbt!")
+                        self.__bob.die()
 
+                        # 🔄 Alle Hunter verlieren ihr Ziel & respawnen
+                        for h in self.__hunter_obstacle:
+                            h.clear_target()
+                            h.respawn()
 
+                        break  # ⛔ Keine weiteren Überprüfungen nötig, sobald Bob getroffen wurde
 
         # 🍏 Hunter trifft Apfel (BOOST!)
         for hunter in self.__hunter_obstacle:
@@ -196,12 +190,27 @@ class SnakeGame:
                 hunter.activate_boost()  # 💨 Hunter wird schneller!
 
         # 🛑 Wenn ein Hunter auf ein Hindernis trifft
-        for obstacle_pos in self.__obstacles.get_positions():
-            if self.__positions_overlap(hunter_pos, obstacle_pos):
-                print("Hunter hat ein Hindernis getroffen! Beide respawnen!")
-                # 🔄 Hindernis und Hunter respawnen
-                hunter.respawn()
-                self.__obstacles.respawn()  # ❗ Falls `Obstacle` kein `respawn()` hat, erstelle es!
+        for hunter in self.__hunter_obstacle:
+            hunter_pos = hunter.get_position() if hunter else None
+
+            if hunter_pos is None or not self.__bob.get_positions():
+                continue  # 🛑 Springt zur nächsten Iteration, falls ungültige Werte vorliegen
+
+            if self.__positions_overlap(hunter_pos, self.__bob.get_positions()[0]):
+                print("[DEBUG] Hunter hat Bob erwischt! Bob stirbt!")
+                self.__bob.die()
+
+                for h in self.__hunter_obstacle:
+                    h.clear_target()
+                    h.respawn()
+                break  # ⛔ Keine weiteren Überprüfungen nötig
+
+        # 🛑 Falls obstacle_pos nicht gesetzt wurde, abbrechen
+        for obstacle in self.__obstacles.get_positions():
+            obstacle_pos = obstacle if obstacle else None
+            if hunter_pos is not None and obstacle_pos is not None:
+                if self.__positions_overlap(hunter_pos, obstacle_pos):
+                    print("DEBUG: Hunter hat ein Hindernis getroffen!")
 
     def __update_effects(self):
         current_time = pygame.time.get_ticks()
