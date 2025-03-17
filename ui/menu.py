@@ -5,6 +5,8 @@ from pygame.math import lerp
 from game.setting.settings import Settings
 from game.ui.menuSnake import MenuSnake
 
+
+
 class Menu:
     def __init__(self, screen):
         self.screen = screen
@@ -21,6 +23,8 @@ class Menu:
             (Settings.screen_width // 2 - 250, 550),
             (Settings.screen_width // 2 - 250, 160)
         ]
+        from main import play_music
+        play_music("game/audio/menu_music.mp3")
 
         # ✅ MenuSnake bekommt jetzt den Pfad als Parameter
         self.menu_snake = MenuSnake(self.snake_path)
@@ -52,9 +56,6 @@ class Menu:
                     print(f"DEBUG: ✅ Icon {filename} erfolgreich geladen!")
                 except pygame.error as e:
                     print(f"DEBUG: ❌ Fehler beim Laden von {filename}: {e}")
-
-
-
 
 
     def lerp(a, b, t):
