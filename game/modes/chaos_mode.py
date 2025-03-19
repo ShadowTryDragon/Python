@@ -27,48 +27,22 @@ class ChaosMode:
         self.__event_timer = pygame.time.get_ticks() + random.randint(20000, 30000)  # Erstes Event nach 20-30 Sekunden
         self.__speed_boost_active = False
         self.__slow_motion_active = False
+        self.bg_color = [30, 30, 30]  # 🌑 Startfarbe dunkel
+        self.color_transition_speed = 0.002  # 🔄 Sanfte Übergänge
+        self.target_color = [random.randint(50, 255) for _ in range(3)]  # 🌈 Zufällige Farbwerte
         self.__reverse_active = False
-        # 🎵 Musik & FFT-Daten vorbereiten
+        self.__obstacle_sprite = pygame.image.load("game/icons/sprites/obstacle.png").convert_alpha()
+        self.__obstacle_sprite = pygame.transform.scale(self.__obstacle_sprite,
+                                                        (Settings.grid_size, Settings.grid_size))
+
         from main import play_music
         play_music("game/audio/chaos_music.mp3")
 
-        self.fft_data = None  # 🛑 Hier speichern wir die FFT-Werte
-        self.bg_color = [30, 30, 30]  # 🌑 Startfarbe dunkel
 
-    import os
 
-    def play_music(music_path):
-        """Spielt die Hintergrundmusik und ermöglicht Bass-Analyse."""
-        if not os.path.exists(music_path):
-            print(f"[ERROR] ❌ Musikdatei nicht gefunden: {music_path}")
-            return
 
-        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)  # Kleinere Buffer für Echtzeit-Analyse
-        pygame.mixer.music.load(music_path)
-        pygame.mixer.music.set_volume(0.7)
-        pygame.mixer.music.play(-1)
 
-    def analyze_audio(self):
-        """Analysiert den Sound nur alle 100ms, um Lags zu vermeiden."""
-        current_time = time.time()
-        if hasattr(self, 'last_audio_check') and (current_time - self.last_audio_check) < 0.1:
-            return  # 🛑 Nur alle 100ms aktualisieren!
 
-        self.last_audio_check = current_time  # Zeit aktualisieren
-
-        try:
-            sound_array = pygame.sndarray.array(pygame.mixer.Sound("game/audio/chaos_music.mp3"))
-            fft_result = np.fft.fft(sound_array)
-            bass_amplitude = np.abs(fft_result[:100]).mean()
-
-            bass_factor = min(max(bass_amplitude / 500000, 0), 1)
-            self.bg_color = [
-                int(255 * bass_factor),
-                int(50 + 100 * bass_factor),
-                int(50 + 150 * bass_factor)
-            ]
-        except Exception as e:
-            print(f"[ERROR] ❌ Audio-Analyse-Fehler: {e}")
 
     def trigger_random_event(self):
         """Löst ein zufälliges Ereignis aus und setzt Timer für die Deaktivierung"""
@@ -215,9 +189,20 @@ class ChaosMode:
 
             self.__draw_objects()
 
+    def animate_background(self):
+        """Sanfter Übergang der Hintergrundfarbe."""
+        for i in range(3):  # Für R, G, B-Werte
+            self.bg_color[i] += (self.target_color[i] - self.bg_color[i]) * self.color_transition_speed
+
+        # Falls die Ziel-Farbe fast erreicht wurde, eine neue Farbe wählen
+        if all(abs(self.bg_color[i] - self.target_color[i]) < 5 for i in range(3)):
+            self.target_color = [random.randint(50, 255) for _ in range(3)]
+
     def __check_collisions(self):
         """Prüft Kollisionen mit Hindernissen & Äpfeln"""
         head_pos = self.__snake.get_head_position()
+
+
 
         # ✅ Kollisionscheck mit Hindernissen (Hindernis-Positionen abrufen!)
         for pos in self.__obstacle.get_positions():  # ✅ Richtige Iteration!
@@ -248,23 +233,24 @@ class ChaosMode:
             self.__apple.randomize_positions()
 
     def __draw_objects(self):
-        """Zeichnet alle Spielobjekte mit Bass-gesteuertem Hintergrund."""
-        self.analyze_audio()  # 🎚 Hintergrundfarbe aktualisieren
+        """Zeichnet alle Spielobjekte mit animiertem Hintergrund."""
+        self.animate_background()  # 🌈 Hintergrundfarbe animieren
         self.__screen.fill(tuple(map(int, self.bg_color)))  # 🎨 Neue Farbe setzen
 
         if self.__apple:
             self.__apple.draw(self.__screen)
 
+        # ✅ Hindernisse korrekt zeichnen
         for pos in self.__obstacle.get_positions():
-            r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
-            pygame.draw.rect(self.__screen, (255, 0, 0), r)  # 🔴 Hindernisse rot
-            pygame.draw.rect(self.__screen, (0, 0, 0), r, 2)  # 🖤 Schwarzer Rand
+            self.__screen.blit(self.__obstacle_sprite, pos)  # 🖼 Hindernis-Sprite zeichnen
 
+        # ✅ Minen korrekt zeichnen
         for mine in self.__mines:
             mine.update(self.__snake)  # 🔄 Blinken & Explosion prüfen
             mine.draw(self.__screen)
 
         self.__snake.draw(self.__screen)
         pygame.display.flip()
+
 
 
