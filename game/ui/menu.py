@@ -23,8 +23,8 @@ class Menu:
             (Settings.screen_width // 2 - 250, 550),
             (Settings.screen_width // 2 - 250, 160)
         ]
-        from main import play_music
-        play_music("game/audio/menu_music.mp3")
+
+        self.play_music("game/audio/menu_music.mp3")
 
         # ✅ MenuSnake bekommt jetzt den Pfad als Parameter
         self.menu_snake = MenuSnake(self.snake_path)
@@ -62,6 +62,18 @@ class Menu:
         """Hilfsfunktion für lineare Interpolation zwischen zwei Farben."""
         return a + (b - a) * t
 
+    def play_music(self, file_path):
+        """Spielt Musik in einer Endlosschleife."""
+        pygame.mixer.init()
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.music.play(-1)
+        print(f"[DEBUG] 🎵 Musik gestartet: {file_path}")
+
+    def stop_music(self):
+        """Stoppt die Musik."""
+        pygame.mixer.music.stop()
+        print("[DEBUG] ⏹️ Musik gestoppt!")
+
     def animate_background(self):
         """Sanfter Übergang der Hintergrundfarbe"""
         t = (pygame.time.get_ticks() % 5000) / 5000  # 5 Sekunden Übergangszeit
@@ -77,8 +89,27 @@ class Menu:
         self.screen.fill(tuple(self.bg_color))  # Hintergrund zuerst zeichnen!
 
         # 🎮 Titel zeichnen
-        title_text = self.title_font.render("🐍 Snake Game 🐍", True, (0, 255, 0))
-        self.screen.blit(title_text, (Settings.screen_width // 2 - title_text.get_width() // 2, 50))
+        title_text = self.title_font.render("Snake Game", True, (0, 255, 0))
+
+        # 🖼️ Snake-Icon laden & skalieren (größer)
+        snake_icon = pygame.image.load("game/icons/snake.png")
+        snake_icon = pygame.transform.scale(snake_icon, (70, 70))  # 🐍 Größere Schlange
+
+        # 📍 Positionen berechnen
+        title_x = Settings.screen_width // 2 - title_text.get_width() // 2
+        title_y = 50
+
+        icon_gap = 20  # 📏 Abstand zwischen Icon und Text
+        icon_size = 70  # 🔍 Gleiche Größe für Berechnung
+
+        icon_left_x = title_x - icon_size - icon_gap  # 🐍 Links vom Titel
+        icon_right_x = title_x + title_text.get_width() + icon_gap  # 🐍 Rechts vom Titel
+        icon_y = title_y - 10  # 📌 Perfekt auf einer Ebene mit dem Titel
+
+        # 🖌️ Elemente auf den Bildschirm zeichnen
+        self.screen.blit(snake_icon, (icon_left_x, icon_y))  # 🐍 Links
+        self.screen.blit(title_text, (title_x, title_y))  # 📝 Titel
+        self.screen.blit(snake_icon, (icon_right_x, icon_y))  # 🐍 Rechts
 
         # 🐍 Menü-Schlange bewegen & zeichnen
         self.menu_snake.move()
@@ -103,18 +134,29 @@ class Menu:
 
         pygame.display.flip()  # ✅ Bildschirm aktualisieren, damit die Schlange sichtbar ist!
 
+    def start_game_music(self, mode):
+        """Startet die passende Musik für den ausgewählten Spielmodus."""
+        self.stop_music()
+        if mode in [0, 1]:  # Start Game oder Classic Mode
+            self.play_music("game/audio/game_music.mp3")
+        elif mode == 2:  # Chaos Mode
+            self.play_music("game/audio/chaos_music.mp3")
+
     def handle_keys(self):
+        """Verarbeitet Tasteneingaben im Menü."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return 4  # Beenden
+                return 4
             elif event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_DOWN, pygame.K_s]:
                     self.selected = (self.selected + 1) % len(self.options)
                 elif event.key in [pygame.K_UP, pygame.K_w]:
                     self.selected = (self.selected - 1) % len(self.options)
                 elif event.key == pygame.K_RETURN:
-                    return self.selected  # ✅ Gibt die gewählte Option zurück
+                    if self.selected in [0, 1, 2]:  # Wenn ein Spielmodus gestartet wird
+                        self.start_game_music(self.selected)  # Musik für den Modus starten
+                    return self.selected
 
         return None
 
