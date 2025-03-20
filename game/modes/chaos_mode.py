@@ -1,17 +1,15 @@
-import os
-import time
+import random
 
 import pygame
-import random
-import numpy as np
 import pygame.sndarray
 
-from game.objects.mine import Mine
-from game.setting.settings import Settings
-from game.objects.snake import Snake
 from game.objects.apple import Apple
+from game.objects.mine import Mine
 from game.objects.obstacles import Obstacle
+from game.objects.snake import Snake
 from game.setting.playerinputs import handle_snake_input
+from game.setting.settings import Settings
+
 
 class ChaosMode:
     def __init__(self, player_name):
@@ -34,9 +32,6 @@ class ChaosMode:
         self.__obstacle_sprite = pygame.image.load("game/icons/sprites/obstacle.png").convert_alpha()
         self.__obstacle_sprite = pygame.transform.scale(self.__obstacle_sprite,
                                                         (Settings.grid_size, Settings.grid_size))
-
-        from main import play_music
-        play_music("game/audio/chaos_music.mp3")
 
 
 
