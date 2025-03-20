@@ -23,8 +23,8 @@ class Menu:
             (Settings.screen_width // 2 - 250, 550),
             (Settings.screen_width // 2 - 250, 160)
         ]
-
-        self.play_music("game/audio/menu_music.mp3")
+        self.menu_music_path = "game/audio/menu_music.mp3"  # 🎵 Menü-Musik Datei
+        self.play_music(self.menu_music_path)  # 🔊 Menü-Musik beim Start
 
         # ✅ MenuSnake bekommt jetzt den Pfad als Parameter
         self.menu_snake = MenuSnake(self.snake_path)
@@ -68,6 +68,12 @@ class Menu:
         pygame.mixer.music.load(file_path)
         pygame.mixer.music.play(-1)
         print(f"[DEBUG] 🎵 Musik gestartet: {file_path}")
+
+    def return_to_menu(self):
+        """Menü-Musik neu starten, wenn man ins Menü zurückkehrt."""
+        print("[DEBUG] 🔄 Zurück im Menü!")  # Wird das angezeigt?
+        self.stop_music()
+        self.play_music(self.menu_music_path)
 
     def stop_music(self):
         """Stoppt die Musik."""
