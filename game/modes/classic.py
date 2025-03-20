@@ -84,6 +84,9 @@ def start_classic_mode():
     screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
     player_name = get_player_name(screen)  # 🆕 Holt den Namen mit der GUI
 
+    if player_name is None:  # Falls ESC gedrückt wurde
+        return  # ⏪ Zurück ins Menü
+
     game = ClassicSnakeGame(player_name)  # 🆕 Erstellt das Spiel mit dem Namen
     final_score = game.main_loop()  # 🎮 Startet das Spiel!
 
