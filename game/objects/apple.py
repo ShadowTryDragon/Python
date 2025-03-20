@@ -135,14 +135,15 @@ class ReverseApple(Apple):
         super().__init__(count, snake=snake)
         self.__reversed = False
         self.__start_time = None
+        self.__image = pygame.image.load("game/icons/sprites/reverse_apple.png")
+        self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
 
     def action(self, snake):
         print("[DEBUG] Reverse Apple gegessen! Steuerung umgekehrt.")  # 🆕 Debug-Ausgabe
         if not self.__reversed:
             self.__reversed = True
             self.__start_time = pygame.time.get_ticks()
-            self.__image = pygame.image.load("game/icons/sprites/reverse_apple.png")
-            self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
+        
             self.reverse_controls()
             snake.flash_red()
 
@@ -165,11 +166,15 @@ class SugarApple(Apple):
         super().__init__(count, snake=snake)  # Korrekt!
         self.__start_time = None
         self.__active = False
+        snake.set_speed(15)  # Geschwindigkeit erhöhen
+        print("[DEBUG] Sugar Apple gegessen! Geschwindigkeit erhöht.")
 
     def action(self, snake):
         if not self.__active:
             self.__active = True
             self.__start_time = pygame.time.get_ticks()
-            snake.set_speed(15)  # Geschwindigkeit erhöhen
-            print("[DEBUG] Sugar Apple gegessen! Geschwindigkeit erhöht.")
             snake.flash_red()
+
+    def draw(self, surface):
+        for pos in self._positions:
+            surface.blit(self.__image, pos)
