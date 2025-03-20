@@ -15,6 +15,7 @@ from game.modes.classic import start_classic_mode
 
 
 
+im_menue = True  # Startet im Menü
 
 
 def start_game(screen):
@@ -51,6 +52,9 @@ def start_game(screen):
 def start_chaos_mode(screen):
     """Startet den Chaos-Modus."""
     player_name = get_player_name(screen)
+
+    if player_name is None:  # Falls ESC gedrückt wurde
+        return  # ⏪ Zurück ins Menü
     game = ChaosMode(player_name)  # ✅ Chaos-Modus starten
     game.main_loop()
 
