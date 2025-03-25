@@ -9,6 +9,8 @@ from game.ui.inputs import get_player_name  # ✅ Namenseingabe importieren
 from game.setting.database import init_db, save_or_update_score
 from game.modes.snake_game import SnakeGame
 from game.modes.classic import start_classic_mode
+from game.modes.battle import BattleRoyale
+
 
 
 
@@ -49,13 +51,13 @@ def start_game(screen):
 
 
 
-def start_chaos_mode(screen):
-    """Startet den Chaos-Modus."""
+def start_battle_royale_mode(screen):
+    """Startet den Battle-Royale-Modus."""
     player_name = get_player_name(screen)
 
     if player_name is None:  # Falls ESC gedrückt wurde
         return  # ⏪ Zurück ins Menü
-    game = ChaosMode(player_name)  # ✅ Chaos-Modus starten
+    game = BattleRoyale(player_name)  # ✅ Battle-Royale-Modus starten
     game.main_loop()
 
 
@@ -75,8 +77,8 @@ def main():
             start_game(screen)
         elif choice == 1:  # ✅ Classic Mode
             start_classic_mode()
-        elif choice == 2:  # ✅ Chaos Modus
-            start_chaos_mode(screen)  # CHAOS MODUS starten
+        elif choice == 2:  # Battle Royale Mode
+            start_battle_royale_mode(screen)
         elif choice == 3:  # ✅ Bestenliste
             show_highscores(screen, mode="both")
         elif choice == 4:  # ✅ Beenden
