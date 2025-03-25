@@ -1,4 +1,4 @@
-
+from game.objects.bullet import Bullet
 from game.setting.gamecolors import GameColors
 from game.setting.settings import Settings
 import random
@@ -6,9 +6,10 @@ import pygame
 
 
 class Snake:
-    def __init__(self, start_pos=None, name="Player"):
+    def __init__(self, start_pos=None, name="Player", is_player=False):
 
         """Erstellt eine Schlange mit einer individuellen Startposition und Steuerung."""
+
         if start_pos is None:
             start_pos = (Settings.screen_width / 2, Settings.screen_height / 2)
         self.__name = name
@@ -20,9 +21,10 @@ class Snake:
         self.__double_points = False
         self.__flash_time = None
         self.__invisible = False  # ✅ Neue Variable für Unsichtbarkeit
-
         self.__original_color = GameColors.BODY_COLOR
         self.__color = self.__original_color  # Standardfarbe setzen
+        self.__is_player = is_player
+        self.__bullets = []  # 🔫 Liste für Kugeln!
 
     def set_invisible(self, state: bool):
         """Schaltet die Unsichtbarkeit der Schlange ein oder aus."""
@@ -73,11 +75,18 @@ class Snake:
         if len(self.__positions) > self.__length:
             self.__positions.pop()
 
-    def get_positions(self):
-        return self.__positions
-
     def get_head_position(self):
+        """Gibt die Kopfposition als (x, y)-Tupel zurück."""
+        if not self.__positions or not isinstance(self.__positions[0], tuple):
+            print(f"[ERROR] Ungültige Position: {self.__positions}")
+            return (0, 0)  # ✅ Sicherheitswert zurückgeben
         return self.__positions[0]
+
+    def die(self):
+        """Tötet die Schlange und entfernt sie vom Spielfeld."""
+        print(f"[DEBUG] 🪦 {self.__name} ist gestorben!")
+        self.__positions = []  # Schlange wird gelöscht
+        self.__alive = False  # Falls `self.__alive` existiert
 
     def reduce_length(self, amount):
         """Verkürzt die Schlange um `amount`, aber lässt mindestens 1 Segment übrig."""
@@ -98,6 +107,10 @@ class Snake:
     def get_score(self):
         return self.__score
 
+    def get_positions(self):
+        """Gibt eine Liste aller Positionen der Schlange zurück."""
+        return self.__positions
+
     def draw(self, surface):
         """Zeichnet die Schlange (unsichtbar oder sichtbar)."""
         if not self.__invisible:  # ✅ Falls unsichtbar, nicht zeichnen
@@ -105,3 +118,17 @@ class Snake:
                 r = pygame.Rect((pos[0], pos[1]), (Settings.grid_size, Settings.grid_size))
                 pygame.draw.rect(surface, self.__color if index else GameColors.HEAD_COLOR, r)
                 pygame.draw.rect(surface, (93, 216, 228), r, 1)
+            for bullet in self.__bullets:
+                bullet.draw(surface)
+
+
+
+    def shoot(self):
+        """Erzeugt ein neues Projektil in der aktuellen Bewegungsrichtung."""
+        head_x, head_y = self.get_head_position()
+        direction_x, direction_y = self.__direction
+        bullet_start = (head_x + direction_x * Settings.grid_size, head_y + direction_y * Settings.grid_size)
+
+        print(f"[DEBUG] 🔫 {self.__name} schießt eine Kugel!")
+        return Bullet(bullet_start, self.__direction)
+
