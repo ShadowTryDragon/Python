@@ -4,7 +4,6 @@ from game.setting.settings import Settings  # ✅ DIREKT importieren
 from game.setting.gamecolors import GameColors  # ✅ Falls GameColors in einer separaten Datei liegt
 
 
-
 class Apple:
     def __init__(self, count=1, snake=None, moving=False):
         self._positions = []
@@ -50,7 +49,6 @@ class Apple:
             if attempts > 100:  # Falls 100 Versuche erfolglos → Stoppen
                 print("[DEBUG] ❌ Konnte keine freie Position für den Apfel finden!")
                 break
-
 
     def relocate_apple(self, snake, obstacles):
         """Platziert den Apfel an eine neue zufällige Stelle, die nicht von der Schlange oder Hindernissen besetzt ist."""
@@ -124,7 +122,6 @@ class MegaApple(Apple):
         snake.increase_score(50)
         snake.flash_red()
 
-
     def draw(self, surface):
         for pos in self._positions:
             surface.blit(self.__image, pos)
@@ -143,7 +140,7 @@ class ReverseApple(Apple):
         if not self.__reversed:
             self.__reversed = True
             self.__start_time = pygame.time.get_ticks()
-        
+
             self.reverse_controls()
             snake.flash_red()
 
@@ -154,7 +151,6 @@ class ReverseApple(Apple):
     def reset_controls(self):
         Settings.up, Settings.down = (0, -1), (0, 1)
         Settings.left, Settings.right = (-1, 0), (1, 0)
-
 
     def draw(self, surface):
         for pos in self._positions:
