@@ -25,6 +25,9 @@ class Snake:
         self.__color = self.__original_color  # Standardfarbe setzen
         self.__is_player = is_player
         self.__bullets = []  # 🔫 Liste für Kugeln!
+        self.__shield = False  # 🛡️ Schutzschild deaktiviert
+        self.__max_bullets = 3  # 🔫 Standard-Anzahl an Kugeln
+        self.__ammo = 5  # 🔫 Spieler startet mit 5 Schuss
 
     def set_invisible(self, state: bool):
         """Schaltet die Unsichtbarkeit der Schlange ein oder aus."""
@@ -45,8 +48,37 @@ class Snake:
             self.__flash_time = None
 
     def set_speed(self, speed):
-        """Setzt die Bewegungsgeschwindigkeit."""
+        """Setzt die Bewegungsgeschwindigkeit der Schlange."""
         self.__speed = speed
+        print(f"[DEBUG] 🏃 Geschwindigkeit geändert: {self.__speed}")
+
+    def activate_shield(self):
+        """Aktiviert einen Schutzschild für 5 Sekunden."""
+        self.__shield_active = True
+        self.__shield_timer = pygame.time.get_ticks() + 5000  # ⏳ Schild läuft 5 Sekunden
+        print("[DEBUG] 🛡️ Schild aktiviert!")
+
+    def update(self):
+        """Überprüft, ob das Schild abgelaufen ist."""
+        if self.__shield_active and pygame.time.get_ticks() > self.__shield_timer:
+            self.__shield_active = False
+            print("[DEBUG] ❌ Schild ist abgelaufen!")
+
+    def is_protected(self):
+        """Gibt zurück, ob die Schlange aktuell geschützt ist."""
+        return self.__shield_active
+
+    def increase_max_bullets(self, amount):
+        self.__max_bullets += amount  # 🔫 Mehr Kugeln sammeln
+
+    def increase_ammo(self, amount):
+        """Erhöht die verfügbare Munition."""
+        self.__ammo += amount
+        print(f"[DEBUG] 🔫 Munition erhöht! Neue Munition: {self.__ammo}")
+
+    def get_ammo(self):
+        """Gibt die aktuelle Munition zurück."""
+        return self.__ammo
 
     def set_double_points(self, active):
         """Setzt Double Points ein oder aus."""
@@ -61,6 +93,9 @@ class Snake:
         """Ändert die Richtung, wenn sie nicht entgegengesetzt zur aktuellen ist."""
         if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:
             self.__direction = new_direction
+
+    def increase_max_bullets(self, amount):
+        self.__max_bullets += amount  # 🔫 Mehr Kugeln sammeln
 
     def move(self):
         """Bewegt die Schlange in die aktuelle Richtung."""
@@ -83,10 +118,14 @@ class Snake:
         return self.__positions[0]
 
     def die(self):
-        """Tötet die Schlange und entfernt sie vom Spielfeld."""
-        print(f"[DEBUG] 🪦 {self.__name} ist gestorben!")
-        self.__positions = []  # Schlange wird gelöscht
-        self.__alive = False  # Falls `self.__alive` existiert
+        """Tötet die Schlange, wenn kein Schild aktiv ist."""
+        if self.__shield:
+            print(f"[DEBUG] 🛡️ {self.__name} hat das Schild benutzt!")
+            self.__shield = False  # ❌ Schild verschwindet nach erstem Treffer
+        else:
+            print(f"[DEBUG] 💀 {self.__name} wurde eliminiert!")
+            self.__alive = False
+            self.__positions = []  # Entferne die Schlange vom Spielfeld
 
     def reduce_length(self, amount):
         """Verkürzt die Schlange um `amount`, aber lässt mindestens 1 Segment übrig."""
@@ -121,14 +160,17 @@ class Snake:
             for bullet in self.__bullets:
                 bullet.draw(surface)
 
-
-
     def shoot(self):
-        """Erzeugt ein neues Projektil in der aktuellen Bewegungsrichtung."""
-        head_x, head_y = self.get_head_position()
-        direction_x, direction_y = self.__direction
-        bullet_start = (head_x + direction_x * Settings.grid_size, head_y + direction_y * Settings.grid_size)
+        """Erstellt ein Projektil, wenn Munition vorhanden ist."""
+        if self.__ammo > 0:
+            self.__ammo -= 1  # 🔽 Munition reduzieren
+            print(f"[DEBUG] 🔫 Schuss abgefeuert! Verbleibende Munition: {self.__ammo}")
+            return Bullet(self.__positions[0], self.__direction)  # 🆕 Bullet erstellen
+        else:
+            print("[DEBUG] ❌ Kein Schuss abgefeuert - Keine Munition!")
+            return None  # 🛑 Kein Schuss möglich
 
-        print(f"[DEBUG] 🔫 {self.__name} schießt eine Kugel!")
-        return Bullet(bullet_start, self.__direction)
+    def get_name(self):
+        return self.__name
+
 
