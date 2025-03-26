@@ -1,4 +1,4 @@
-
+import random
 import pygame
 
 from game.objects.powerup import PowerUp
@@ -18,34 +18,40 @@ class BattleRoyale:
         self.__bullets = []  # 🔫 Gespeicherte Schüsse
         self.__powerups = [PowerUp() for _ in range(2)]  # ⚡ 2 zufällige Power-Ups
         self.__running = True
+        self.__next_powerup_time = pygame.time.get_ticks() + random.randint(5000, 15000)  # 🎲 Nächstes Power-Up
 
-    def handle_input(self):
-        """Steuert die Spielerbewegung und das Schießen."""
-        keys = pygame.key.get_pressed()
+    def spawn_powerup(self):
+        """Spawnt zufällig ein Power-Up nach einer bestimmten Zeit."""
+        if pygame.time.get_ticks() >= self.__next_powerup_time:
+            self.__powerups.append(PowerUp())
+            self.__next_powerup_time = pygame.time.get_ticks() + random.randint(5000, 15000)  # 🎲 Neues Intervall
 
-        if keys[pygame.K_LEFT]:
-            self.__player.turn(Settings.left)
-        elif keys[pygame.K_RIGHT]:
-            self.__player.turn(Settings.right)
-        elif keys[pygame.K_UP]:
-            self.__player.turn(Settings.up)
-        elif keys[pygame.K_DOWN]:
-            self.__player.turn(Settings.down)
 
-        # 🔫 Schießen mit der Leertaste
-        if keys[pygame.K_SPACE]:
-            self.__bullets.append(self.__player.shoot())
 
     def check_collisions(self):
-        """Prüft Kollisionen mit Schlangen & Power-Ups."""
-        for bullet in self.__bullets:
-            for enemy in self.__enemies:
-                if bullet.get_position() in enemy.get_positions():
-                    enemy.die()
-                    self.__bullets.remove(bullet)
+        """Prüft Kollisionen zwischen Schüssen, Gegnern & Power-Ups."""
 
-        for powerup in self.__powerups:
+        # 🔫 Schüsse treffen Gegner
+        for bullet in self.__bullets[:]:  # Kopie der Liste zur sicheren Iteration
+            for enemy in self.__enemies[:]:  # Kopie der Gegner-Liste
+
+                if bullet.get_position() in enemy.get_positions():
+                    print(f"[DEBUG] 💀 {enemy.get_name()} wurde getroffen!")
+                    enemy.die()  # ✅ Gegner stirbt
+                    self.__enemies.remove(enemy)  # 🗑️ Entferne Gegner
+                    self.__bullets.remove(bullet)  # 🗑️ Entferne Geschoss
+                    break  # ⏭️ Keine weitere Prüfung für diesen Schuss
+
+            # 🔫 Schüsse treffen den Spieler → GAME OVER!
+            if bullet.get_position() in self.__player.get_positions():
+                print("[DEBUG] ❌ SPIELER WURDE GETROFFEN! GAME OVER!")
+                self.__running = False  # 🛑 Spiel beenden
+                return
+
+        # ⚡ Power-Ups einsammeln
+        for powerup in self.__powerups[:]:
             if self.__player.get_head_position() == powerup.get_position():
+                print(f"[DEBUG] ⚡ {self.__player_name} hat ein Power-Up eingesammelt!")
                 powerup.activate(self.__player)
                 self.__powerups.remove(powerup)
 
