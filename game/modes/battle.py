@@ -1,10 +1,12 @@
 import random
+
 import pygame
 
 from game.objects.powerup import PowerUp
 from game.objects.snake import Snake
 from game.setting.playerinputs import handle_snake_input
 from game.setting.settings import Settings
+from game.ui.inputs import get_player_name
 
 
 class BattleRoyale:
@@ -25,8 +27,6 @@ class BattleRoyale:
         if pygame.time.get_ticks() >= self.__next_powerup_time:
             self.__powerups.append(PowerUp())
             self.__next_powerup_time = pygame.time.get_ticks() + random.randint(5000, 15000)  # 🎲 Neues Intervall
-
-
 
     def check_collisions(self):
         """Prüft Kollisionen zwischen Schüssen, Gegnern & Power-Ups."""
@@ -57,25 +57,113 @@ class BattleRoyale:
 
     def main_loop(self):
         """Battle Royale Spielschleife"""
+        self.__dead_enemies = []  # 💀 Liste der toten Feinde für den Respawn
+
         while self.__running:
             self.__clock.tick(10)
             events = pygame.event.get()
 
-            # 🎮 Steuerung übernehmen (jetzt mit Schießen!)
+            # 🎮 Steuerung übernehmen (jetzt mit begrenzter Munition!)
             self.__running, new_bullets = handle_snake_input(events, self.__player, battle_mode=True)
 
-            # 🔫 Neue Schüsse zur Liste hinzufügen
-            self.__bullets.extend(new_bullets)
+            # 🔫 Nur neue Schüsse hinzufügen, wenn Munition vorhanden ist
+            if self.__player.has_ammo():
+                self.__bullets.extend(new_bullets)
+                self.__player.decrease_ammo(len(new_bullets))  # 🔻 Munition verringern
 
             self.__player.move()
             for enemy in self.__enemies:
                 enemy.move()
 
+                # 🔫 Gegner schießen zufällig
+                if random.randint(1, 100) > 98:  # 2% Chance pro Frame
+                    self.__bullets.append(enemy.shoot())
+
             for bullet in self.__bullets:
                 bullet.move()
 
             self.check_collisions()
+            self.spawn_powerup()
+            self.handle_enemy_respawn()  # 🏴‍☠️ Tote Feinde wiederbeleben
+            # 🏆 Game Over prüfen
+            if not self.__running:
+                game_over, new_name = self.show_game_over_screen(victory=False)
+                return game_over, new_name  # 🔄 Entscheidung über Neustart oder Menü
+
+            # 🏅 Sieg prüfen (alle Gegner besiegt)
+            if len(self.__enemies) == 0:
+                game_over, new_name = self.show_game_over_screen(victory=True)
+                return game_over, new_name  # 🔄 Entscheidung über Neustart oder Menü
+
             self.draw_objects()
+
+    def handle_enemy_respawn(self):
+        """Belebt besiegte Feinde nach 10 Sekunden wieder."""
+        current_time = pygame.time.get_ticks()
+        for enemy, death_time in self.__dead_enemies[:]:
+            if current_time - death_time > 10000:  # ⏳ 10 Sekunden vergangen
+                self.__enemies.append(enemy)
+                self.__dead_enemies.remove((enemy, death_time))
+
+    def show_game_over_screen(self, victory=False, sys=None):
+        """Zeigt den Game Over Bildschirm mit Animation & schönerem Design."""
+        font_large = pygame.font.SysFont("monospace", 50, bold=True)
+        font_small = pygame.font.SysFont("monospace", 25)
+
+        blink = True  # Für blinkenden Text
+        blink_timer = 0  # Zeit für Blinken
+
+        # 🏆 Sieg oder Niederlage?
+        game_over_text = "DU HAST GEWONNEN!" if victory else "GAME OVER"
+        text_color = (50, 255, 50) if victory else (255, 50, 50)  # Grün für Sieg, Rot für Niederlage
+
+        while True:
+            self.__screen.fill((20, 20, 20))  # 🎨 Dunkelgrauer Hintergrund
+
+            # 🔴 Game Over oder Sieg-Text
+            text1 = font_large.render(game_over_text, True, text_color)
+            self.__screen.blit(text1, (Settings.screen_width // 2 - text1.get_width() // 2, 100))
+
+            # 👾 Verbleibende Gegner oder Score
+            if victory:
+                text2 = font_small.render("Alle Gegner besiegt!", True, (255, 255, 255))
+            else:
+                text2 = font_small.render(f"Verbleibende Gegner: {len(self.__enemies)}", True, (255, 255, 255))
+
+            self.__screen.blit(text2, (Settings.screen_width // 2 - text2.get_width() // 2, 170))
+
+            # ✨ Blinkender Hinweis (alle 500ms)
+            current_time = pygame.time.get_ticks()
+            if current_time - blink_timer > 500:  # Blinkt alle 500ms
+                blink = not blink
+                blink_timer = current_time
+
+            if blink:
+                text_blink = font_small.render("Drücke eine Taste", True, (255, 255, 100))
+                self.__screen.blit(text_blink, (Settings.screen_width // 2 - text_blink.get_width() // 2, 230))
+
+            # 🎮 Menüoptionen
+            text3 = font_small.render("Enter: Neustart | N: Neuer Name | M: Menü", True, (200, 200, 200))
+            self.__screen.blit(text3, (Settings.screen_width // 2 - text3.get_width() // 2, 300))
+
+            pygame.display.flip()
+
+            # 🕹️ Event Handling für Eingaben
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:  # Neustart
+                        return False, None
+                    elif event.key == pygame.K_n:  # Neuer Name wählen
+                        new_name = get_player_name(self.__screen)  # 🎯 Neuen Namen abfragen
+                        if new_name is None:
+                            return True, None  # Falls ESC gedrückt → Zurück zum Menü
+                        return False, new_name  # ✅ Richtiger neuer Name
+
+                    elif event.key == pygame.K_m:  # Zurück zum Menü
+                        return True, None
 
     def draw_objects(self):
         """Zeichnet alle Objekte auf dem Bildschirm."""
