@@ -1,8 +1,10 @@
+import random
+
+import pygame
+
 from game.objects.bullet import Bullet
 from game.setting.gamecolors import GameColors
 from game.setting.settings import Settings
-import random
-import pygame
 
 
 class Snake:
@@ -36,6 +38,7 @@ class Snake:
 
     def is_alive(self):
         return True  # Snake stirbt nie, daher immer True
+
     def flash_red(self):
         """Lässt die Schlange kurz rot aufleuchten."""
         self.__color = (255, 0, 0)
@@ -96,6 +99,14 @@ class Snake:
 
     def increase_max_bullets(self, amount):
         self.__max_bullets += amount  # 🔫 Mehr Kugeln sammeln
+
+    def has_ammo(self):
+        """Überprüft, ob Munition vorhanden ist."""
+        return self.__ammo > 0
+
+    def decrease_ammo(self, amount=1):
+        """Reduziert die Munition um eine bestimmte Anzahl."""
+        self.__ammo = max(0, self.__ammo - amount)
 
     def move(self):
         """Bewegt die Schlange in die aktuelle Richtung."""
@@ -172,5 +183,3 @@ class Snake:
 
     def get_name(self):
         return self.__name
-
-
