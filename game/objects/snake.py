@@ -8,7 +8,7 @@ from game.setting.settings import Settings
 
 
 class Snake:
-    def __init__(self, start_pos=None, name="Player", is_player=False):
+    def __init__(self, start_pos=None, name="Player", is_player=False, position=None):
 
         """Erstellt eine Schlange mit einer individuellen Startposition und Steuerung."""
 
@@ -16,8 +16,8 @@ class Snake:
             start_pos = (Settings.screen_width / 2, Settings.screen_height / 2)
         self.__name = name
         self.__length = 1
-        self.__positions = [start_pos]
-        self.__direction = random.choice(Settings.directions)
+        self.__positions = [position if position else (0, 0)]  # Falls keine Position gegeben ist, (0,0) nehmen
+        self.__direction = (1, 0)  # Standardrichtung: Rechts
         self.__score = 0
         self.__speed = 10
         self.__double_points = False
@@ -61,6 +61,11 @@ class Snake:
         self.__shield_timer = pygame.time.get_ticks() + 5000  # ⏳ Schild läuft 5 Sekunden
         print("[DEBUG] 🛡️ Schild aktiviert!")
 
+    def set_random_direction(self):
+        """Wechselt die Richtung zufällig."""
+        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # Oben, Unten, Links, Rechts
+        self.__direction = random.choice(directions)
+
     def update(self):
         """Überprüft, ob das Schild abgelaufen ist."""
         if self.__shield_active and pygame.time.get_ticks() > self.__shield_timer:
@@ -96,6 +101,10 @@ class Snake:
         """Ändert die Richtung, wenn sie nicht entgegengesetzt zur aktuellen ist."""
         if (new_direction[0] * -1, new_direction[1] * -1) != self.__direction:
             self.__direction = new_direction
+
+    def set_direction(self, direction):
+        """✅ Ändert die Bewegungsrichtung der Schlange."""
+        self.__direction = direction
 
     def increase_max_bullets(self, amount):
         self.__max_bullets += amount  # 🔫 Mehr Kugeln sammeln
@@ -172,14 +181,11 @@ class Snake:
                 bullet.draw(surface)
 
     def shoot(self):
-        """Erstellt ein Projektil, wenn Munition vorhanden ist."""
-        if self.__ammo > 0:
-            self.__ammo -= 1  # 🔽 Munition reduzieren
-            print(f"[DEBUG] 🔫 Schuss abgefeuert! Verbleibende Munition: {self.__ammo}")
-            return Bullet(self.__positions[0], self.__direction)  # 🆕 Bullet erstellen
-        else:
-            print("[DEBUG] ❌ Kein Schuss abgefeuert - Keine Munition!")
-            return None  # 🛑 Kein Schuss möglich
+        """Erstellt eine neue Kugel, falls möglich."""
+        if self.has_ammo():  # ❗ Verhindert Schießen ohne Munition
+            self.decrease_ammo()
+            return Bullet(self.__positions[0], self.__direction, self)  # ✅ Richtige Kugel zurückgeben
+        return None  # ❌ Falls nicht geschossen werden kann
 
     def get_name(self):
         return self.__name
