@@ -15,18 +15,46 @@ class BattleRoyale:
         self.__player_name = player_name
         self.__clock = pygame.time.Clock()
         self.__screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
-        self.__player = Snake(name=player_name, is_player=True)  # ✅ Jetzt funktioniert es!
-        self.__enemies = [Snake(name=f"Enemy {i}", is_player=False) for i in range(3)]  # 🆚 3 Gegner-Schlangen
         self.__bullets = []  # 🔫 Gespeicherte Schüsse
         self.__powerups = [PowerUp() for _ in range(2)]  # ⚡ 2 zufällige Power-Ups
         self.__running = True
+        # 🐍 Spieler an zufälliger Position spawnen
+        self.__player = Snake(name=player_name, is_player=True, position=self.get_random_position())
+
+        # 🆚 Gegner-Schlangen zufällig spawnen
+        self.__enemies = [Snake(name=f"Enemy {i}", is_player=False, position=self.get_random_position()) for i in
+                          range(3)]
         self.__next_powerup_time = pygame.time.get_ticks() + random.randint(5000, 15000)  # 🎲 Nächstes Power-Up
 
+    def move_enemies(self):
+        for enemy in self.__enemies:
+            if random.randint(0, 10) > 8:
+                enemy.set_random_direction()
+                enemy.move()
+
+
+
+
+    def get_random_position(self):
+        """✅ Gibt eine zufällige Position im Spielfeld zurück."""
+        grid_x = random.randint(0, (Settings.screen_width // Settings.grid_size) - 1) * Settings.grid_size
+        grid_y = random.randint(0, (Settings.screen_height // Settings.grid_size) - 1) * Settings.grid_size
+        return (grid_x, grid_y)
     def spawn_powerup(self):
         """Spawnt zufällig ein Power-Up nach einer bestimmten Zeit."""
         if pygame.time.get_ticks() >= self.__next_powerup_time:
             self.__powerups.append(PowerUp())
             self.__next_powerup_time = pygame.time.get_ticks() + random.randint(5000, 15000)  # 🎲 Neues Intervall
+
+    def check_collision(self, bullet, target):
+        """Prüft, ob eine Kugel den Gegner oder den Spieler trifft (Abstand <= halbe Grid-Größe)."""
+        bullet_x, bullet_y = bullet.get_position()
+
+        for segment_x, segment_y in target.get_positions():
+            distance = ((bullet_x - segment_x) ** 2 + (bullet_y - segment_y) ** 2) ** 0.5  # 🧮 Abstand berechnen
+            if distance < Settings.grid_size // 2:  # ✅ Falls Kugel nah genug ist
+                return True
+        return False
 
     def check_collisions(self):
         """Prüft Kollisionen zwischen Schüssen, Gegnern & Power-Ups."""
@@ -34,8 +62,7 @@ class BattleRoyale:
         # 🔫 Schüsse treffen Gegner
         for bullet in self.__bullets[:]:  # Kopie der Liste zur sicheren Iteration
             for enemy in self.__enemies[:]:  # Kopie der Gegner-Liste
-
-                if bullet.get_position() in enemy.get_positions():
+                if bullet.get_position() in enemy.get_positions() and bullet.owner != enemy:
                     print(f"[DEBUG] 💀 {enemy.get_name()} wurde getroffen!")
                     enemy.die()  # ✅ Gegner stirbt
                     self.__enemies.remove(enemy)  # 🗑️ Entferne Gegner
@@ -43,7 +70,7 @@ class BattleRoyale:
                     break  # ⏭️ Keine weitere Prüfung für diesen Schuss
 
             # 🔫 Schüsse treffen den Spieler → GAME OVER!
-            if bullet.get_position() in self.__player.get_positions():
+            if self.check_collision(bullet, self.__player):
                 print("[DEBUG] ❌ SPIELER WURDE GETROFFEN! GAME OVER!")
                 self.__running = False  # 🛑 Spiel beenden
                 return
@@ -73,7 +100,15 @@ class BattleRoyale:
 
             self.__player.move()
             for enemy in self.__enemies:
+                if random.random() < 0.1:  # 10% Chance, die Richtung zu ändern
+                    enemy.set_random_direction()
                 enemy.move()
+
+                # 🆕 Lasse den Gegner mit einer Wahrscheinlichkeit von 2% schießen
+                if random.random() < 0.02:
+                    bullet = enemy.shoot()
+                    if bullet:  # Nur hinzufügen, wenn nicht None
+                        self.__bullets.append(bullet)
 
                 # 🔫 Gegner schießen zufällig
                 if random.randint(1, 100) > 98:  # 2% Chance pro Frame
