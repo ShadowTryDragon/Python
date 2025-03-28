@@ -16,8 +16,13 @@ class Bullet:
         """Bewegt das Geschoss in die gewählte Richtung."""
         x, y = self.__position
         dx, dy = self.__direction
-        self.__position = ((x + dx * self.__speed) % Settings.screen_width,
-                           (y + dy * self.__speed) % Settings.screen_height)
+
+        # ✅ Position aktualisieren
+        new_x = (x + dx * self.__speed) % Settings.screen_width
+        new_y = (y + dy * self.__speed) % Settings.screen_height
+
+        # ✅ Stelle sicher, dass die Position eine Liste bleibt
+        self.__position = [new_x, new_y]
 
     def get_position(self):
         """Gibt die Position zurück."""
