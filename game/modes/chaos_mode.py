@@ -1,12 +1,15 @@
 import random
+
 import pygame
 import pygame.sndarray
+
 from game.objects.apple import Apple
 from game.objects.mine import Mine
 from game.objects.obstacles import Obstacle
 from game.objects.snake import Snake
 from game.setting.playerinputs import handle_snake_input
 from game.setting.settings import Settings
+
 
 class ChaosMode:
     def __init__(self, player_name):
@@ -26,10 +29,10 @@ class ChaosMode:
         self.color_transition_speed = 0.002
         self.target_color = [random.randint(50, 255) for _ in range(3)]
         self.__obstacle_sprite = pygame.image.load("game/icons/sprites/obstacle.png").convert_alpha()
-        self.__obstacle_sprite = pygame.transform.scale(self.__obstacle_sprite,
-                                                        (Settings.grid_size, Settings.grid_size))
+        self.__obstacle_sprite = pygame.transform.scale(self.__obstacle_sprite, (Settings.grid_size, Settings.grid_size))
         self.__active_effects = {}  # 🎯 Hält alle aktiven Effekte & Endzeiten
         self.__event_timer = pygame.time.get_ticks() + random.randint(20000, 30000)
+        self.__my_font = pygame.font.SysFont("monospace", 16)
 
     def trigger_random_event(self):
         """Löst ein zufälliges Ereignis aus und setzt Timer für die Deaktivierung"""
@@ -107,9 +110,11 @@ class ChaosMode:
     def main_loop(self):
         """Hauptspiel-Schleife"""
         while self.__running:
+            self.__update_screen()
             self.__clock.tick(15 if self.__speed_boost_active else 5 if self.__slow_motion_active else 10)
             self.__running = handle_snake_input(pygame.event.get(), self.__snake, battle_mode=False)
             self.__obstacle.move()
+            self.handle_events()
 
             if pygame.time.get_ticks() >= self.__event_timer:
                 self.trigger_random_event()
@@ -117,6 +122,7 @@ class ChaosMode:
             self.__snake.move()
             if self.__apple:
                 self.__check_collisions()
+                self.__apple.move()
             self.__draw_objects()
 
     def start_effect(self, effect_name, duration):
@@ -156,15 +162,11 @@ class ChaosMode:
             Settings.left, Settings.right = (-1, 0), (1, 0)
             Settings.up, Settings.down = (0, -1), (0, 1)
 
-        elif effect_name == "no_apples":
-            if hasattr(self, "saved_apple_positions"):
-                self.__apple._positions = self.saved_apple_positions
-                del self.saved_apple_positions
-            else:
-                self.__apple.randomize_positions()
 
-        elif effect_name == "hunting_apple":
-            self.__apple = Apple(count=1, snake=self.__snake)
+        elif effect_name in ["hunting_apple", "no_apples"]:
+            apple_count = random.randint(2, 5)  # 🍏 Zufällige Anzahl an Äpfeln
+            self.__apple = Apple(count=apple_count, snake=self.__snake)
+            print(f"[CHAOS] 🍏 {apple_count} neue Äpfel erschienen!")
 
         elif effect_name == "meteor":
             self.__obstacle.respawn()
@@ -220,4 +222,16 @@ class ChaosMode:
         if all(abs(self.bg_color[i] - self.target_color[i]) < 5 for i in range(3)):
             self.target_color = [random.randint(50, 255) for _ in range(3)]
 
+    def __update_screen(self):
+        """Aktualisiert den Bildschirm mit dem Punktestand."""
+        # 🎮 Score-Text definieren
+        score_text = f"{self.__player_name} | Score: {self.__snake.get_score()}"
+
+        # 🖥️ Text rendern
+        text_surface = self.__my_font.render(score_text, True, (255, 255, 255))
+
+        # 📍 Text oben links zeichnen
+        self.__screen.blit(text_surface, (5, 10))
+
+        pygame.display.update()
 
