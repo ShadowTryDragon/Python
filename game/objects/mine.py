@@ -1,6 +1,7 @@
 import pygame
-import random
+
 from game.setting.settings import Settings
+
 
 class Mine:
     def __init__(self, x, y):
@@ -22,7 +23,7 @@ class Mine:
             self.__blink_time = pygame.time.get_ticks()  # 🕒 Startzeit merken
             self.__exploding = True
 
-    def update(self):
+    def update(self, snake):
         """Überprüft, ob die Explosion starten soll."""
         if self.__exploding:
             elapsed_time = pygame.time.get_ticks() - self.__blink_time
