@@ -1,7 +1,9 @@
 import random
+
 import pygame
-from game.setting.settings import Settings  # ✅ DIREKT importieren
+
 from game.setting.gamecolors import GameColors  # ✅ Falls GameColors in einer separaten Datei liegt
+from game.setting.settings import Settings  # ✅ DIREKT importieren
 
 
 class Apple:
@@ -132,7 +134,7 @@ class ReverseApple(Apple):
         super().__init__(count, snake=snake)
         self.__reversed = False
         self.__start_time = None
-        self.__image = pygame.image.load("game/icons/sprites/reverse_apple.png")
+        self.__image = pygame.image.load("game/icons/sprites/golden_apple.png")
         self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
 
     def action(self, snake):
@@ -161,7 +163,9 @@ class SugarApple(Apple):
     def __init__(self, count=1, snake=None):
         super().__init__(count, snake=snake)  # Korrekt!
         self.__start_time = None
+        self.__image = pygame.image.load("game/icons/sprites/golden_apple.png")
         self.__active = False
+
         snake.set_speed(15)  # Geschwindigkeit erhöhen
         print("[DEBUG] Sugar Apple gegessen! Geschwindigkeit erhöht.")
 
