@@ -164,6 +164,7 @@ class SugarApple(Apple):
         super().__init__(count, snake=snake)  # Korrekt!
         self.__start_time = None
         self.__image = pygame.image.load("game/icons/sprites/golden_apple.png")
+        self.__image = pygame.transform.scale(self.__image, (Settings.grid_size, Settings.grid_size))
         self.__active = False
 
         snake.set_speed(15)  # Geschwindigkeit erhöhen
