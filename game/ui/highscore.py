@@ -1,51 +1,130 @@
+import sqlite3
+import sys
 import pygame
-from game.setting.database import get_highscores, get_classic_highscores
+from game import Settings
 
-def show_highscores(screen, mode="both"):  # ✅ Mode hinzugefügt!
-    """Zeigt die Highscores für Normal & Classic an."""
-    font_title = pygame.font.SysFont("monospace", 40, bold=True)
-    font_score = pygame.font.SysFont("monospace", 25)
+def init_db():
+    """Erstellt die Tabellen für beide Spielmodi."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
 
-    # 🏆 Highscores abrufen
-    normal_scores = get_highscores() if mode in ["both", "normal"] else []
-    classic_scores = get_classic_highscores() if mode in ["both", "classic"] else []
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS highscores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            score INTEGER NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS classic_highscores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            score INTEGER NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chaos_highscores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                score INTEGER NOT NULL
+            )
+        """)
+
+    conn.commit()
+    conn.close()
+
+import sqlite3
+
+def save_or_update_score(name, score, mode="normal"):
+    """Speichert den Score nur, wenn der Name nicht existiert oder wenn der neue Score höher ist."""
+    if mode == "normal":
+        table = "highscores"
+    elif mode == "classic":
+        table = "classic_highscores"
+    elif mode == "chaos":
+        table = "chaos_highscores"
+    else:
+        print("[ERROR] ❌ Ungültiger Modus!")
+        return
+
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+
+    cursor.execute(f"SELECT score FROM {table} WHERE name = ?", (name,))
+    result = cursor.fetchone()
+
+    if result:
+        current_highscore = result[0]
+        if score > current_highscore:
+            cursor.execute(f"UPDATE {table} SET score = ? WHERE name = ?", (score, name))
+            print(f"[DEBUG] Neuer Highscore für {name} im {mode}-Modus: {score} (alt: {current_highscore})")
+        else:
+            print(f"[DEBUG] Score {score} ist niedriger als Highscore {current_highscore} - kein Update.")
+    else:
+        cursor.execute(f"INSERT INTO {table} (name, score) VALUES (?, ?)", (name, score))
+        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {score} im {mode}-Modus hinzugefügt!")
+
+    conn.commit()
+    conn.close()
+
+
+def get_chaos_highscores():
+    """Liest die Top 10 Highscores aus der Chaos Mode-Tabelle."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM chaos_highscores ORDER BY score DESC LIMIT 10")
+    scores = cursor.fetchall()
+    conn.close()
+    return scores
+
+
+
+def get_highscores(mode="normal"):
+    """Holt die Highscores aus der richtigen Tabelle."""
+    table = "highscores" if mode == "normal" else "classic_highscores"
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT name, score FROM {table} ORDER BY score DESC LIMIT 10")
+    scores = cursor.fetchall()
+    conn.close()
+    return scores
+
+
+
+def get_classic_highscores():
+    """Liest die Top 10 Highscores aus der Classic Mode-Tabelle."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM classic_highscores ORDER BY score DESC LIMIT 10")
+    scores = cursor.fetchall()
+    conn.close()
+    return scores
+
+
+def show_classic_highscores(screen):
+    font = pygame.font.SysFont("monospace", 25)
+    scores = get_classic_highscores()
 
     while True:
-        screen.fill((30, 30, 30))  # 🎨 Hintergrund
+        screen.fill((0, 0, 0))
+        title = font.render("Classic Mode - Bestenliste", True, (255, 255, 255))
+        screen.blit(title, (Settings.screen_width // 2 - 100, 50))
 
-        # 🏆 Titel anzeigen
-        title_text = font_title.render("🏆 HIGHSCORES 🏆", True, (255, 255, 0))
-        screen.blit(title_text, (screen.get_width() // 2 - title_text.get_width() // 2, 30))
-
-        if normal_scores:
-            normal_text = font_title.render("Normal Mode", True, (100, 200, 255))
-            screen.blit(normal_text, (screen.get_width() // 4 - normal_text.get_width() // 2, 100))
-
-        if classic_scores:
-            classic_text = font_title.render("Classic Mode", True, (255, 150, 100))
-            screen.blit(classic_text, (3 * screen.get_width() // 4 - classic_text.get_width() // 2, 100))
-
-        if normal_scores and classic_scores:
-            pygame.draw.line(screen, (255, 255, 255), (screen.get_width() // 2, 100),
-                             (screen.get_width() // 2, screen.get_height() - 100), 2)
-
-        for i, (name, score) in enumerate(normal_scores[:10]):
-            text = font_score.render(f"{i+1}. {name}: {score}", True, (200, 200, 200))
-            screen.blit(text, (screen.get_width() // 4 - text.get_width() // 2, 160 + i * 30))
-
-        for i, (name, score) in enumerate(classic_scores[:10]):
-            text = font_score.render(f"{i+1}. {name}: {score}", True, (200, 200, 200))
-            screen.blit(text, (3 * screen.get_width() // 4 - text.get_width() // 2, 160 + i * 30))
-
-        exit_text = font_score.render("↩ ENTER / ESC zum Menü", True, (255, 255, 255))
-        screen.blit(exit_text, (screen.get_width() // 2 - exit_text.get_width() // 2, screen.get_height() - 60))
+        for i, (name, score) in enumerate(scores):
+            text = font.render(f"{name}: {score}", True, (200, 200, 200))
+            screen.blit(text, (100, 100 + i * 30))
 
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return
+                sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
+                if event.key == pygame.K_RETURN:
                     return  # Zurück zum Menü
+
+
+
