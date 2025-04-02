@@ -78,28 +78,4 @@ class ClassicSnakeGame:
         print("Game Over: Classic Mode beendet.")
         return self.__snake.get_score()  # Finaler Score wird zurückgegeben
 
-# Funktion zum Starten des Classic Mode
-def start_classic_mode():
-    pygame.init()
-    screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
-    player_name = get_player_name(screen)  # 🆕 Holt den Namen mit der GUI
 
-    if player_name is None:  # Falls ESC gedrückt wurde
-        return  # ⏪ Zurück ins Menü
-
-    game = ClassicSnakeGame(player_name)  # 🆕 Erstellt das Spiel mit dem Namen
-    final_score = game.main_loop()  # 🎮 Startet das Spiel!
-
-    if final_score is not None:  # ✅ Falls Score existiert, speichern
-        save_or_update_score(player_name, final_score, mode="classic")
-
-
-    print(f"DEBUG: Classic Mode beendet. Endpunktzahl: {final_score}")  # Debugging
-
-
-
-
-
-# Falls die Datei direkt ausgeführt wird, starte Classic Mode
-if __name__ == "__main__":
-    start_classic_mode()
