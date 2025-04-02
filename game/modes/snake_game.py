@@ -178,7 +178,7 @@ class SnakeGame:
                         return  # ✅ Spiel sofort beenden
 
                 # 🏹 Prüfen, ob ein Hunter Bob getroffen hat
-                hunter_positions = [pos for hunter in self.__hunter_obstacle for pos in hunter.get_positions()]
+                hunter_positions = [pos for hunter in self.__hunter_obstacle for pos in hunter.get_position()]
                 if bob_head_position in set(hunter_positions):
                     print("[DEBUG] Bob wurde von einem Hindernis getroffen!")
                     self.__bob.die()
