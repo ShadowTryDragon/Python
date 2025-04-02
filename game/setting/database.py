@@ -24,6 +24,14 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chaos_highscores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                score INTEGER NOT NULL
+            )
+        """)
+
     conn.commit()
     conn.close()
 
@@ -31,11 +39,19 @@ import sqlite3
 
 def save_or_update_score(name, score, mode="normal"):
     """Speichert den Score nur, wenn der Name nicht existiert oder wenn der neue Score höher ist."""
-    table = "highscores" if mode == "normal" else "classic_highscores"
+    if mode == "normal":
+        table = "highscores"
+    elif mode == "classic":
+        table = "classic_highscores"
+    elif mode == "chaos":
+        table = "chaos_highscores"
+    else:
+        print("[ERROR] ❌ Ungültiger Modus!")
+        return
+
     conn = sqlite3.connect("highscores.db")
     cursor = conn.cursor()
 
-    # 🔍 Prüfen, ob der Spieler existiert & seinen Highscore abrufen
     cursor.execute(f"SELECT score FROM {table} WHERE name = ?", (name,))
     result = cursor.fetchone()
 
@@ -43,15 +59,26 @@ def save_or_update_score(name, score, mode="normal"):
         current_highscore = result[0]
         if score > current_highscore:
             cursor.execute(f"UPDATE {table} SET score = ? WHERE name = ?", (score, name))
-            print(f"[DEBUG] Neuer Highscore für {name}: {score} (alt: {current_highscore})")
+            print(f"[DEBUG] Neuer Highscore für {name} im {mode}-Modus: {score} (alt: {current_highscore})")
         else:
             print(f"[DEBUG] Score {score} ist niedriger als Highscore {current_highscore} - kein Update.")
     else:
         cursor.execute(f"INSERT INTO {table} (name, score) VALUES (?, ?)", (name, score))
-        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {score} hinzugefügt!")
+        print(f"[DEBUG] Neuer Spieler {name} mit Highscore {score} im {mode}-Modus hinzugefügt!")
 
     conn.commit()
     conn.close()
+
+
+def get_chaos_highscores():
+    """Liest die Top 10 Highscores aus der Chaos Mode-Tabelle."""
+    conn = sqlite3.connect("highscores.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM chaos_highscores ORDER BY score DESC LIMIT 10")
+    scores = cursor.fetchall()
+    conn.close()
+    return scores
+
 
 
 def get_highscores(mode="normal"):
