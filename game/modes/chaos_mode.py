@@ -176,14 +176,7 @@ class ChaosMode:
 
         pygame.time.set_timer(pygame.USEREVENT + len(self.__active_effects), 0)  # ❌ Timer deaktivieren
 
-        def __check_collisions(self):
-
-        # 💀 Selbst-Kollision (Spieler trifft sich selbst)
-        if self.__snake.get_head_position() in self.__snake.get_positions()[1:]:
-            print("Game Over: Schlange hat sich selbst getroffen!")
-            self.__running = False
-            return
-
+    def __check_collisions(self):
         """Prüft Kollisionen mit Hindernissen, Minen & Äpfeln"""
         head_pos = self.__snake.get_head_position()
 
@@ -241,4 +234,3 @@ class ChaosMode:
         self.__screen.blit(text_surface, (5, 10))
 
         pygame.display.update()
-
