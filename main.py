@@ -2,13 +2,14 @@ import os
 
 import pygame
 
+from game import Settings
 from game.modes.chaos_mode import ChaosMode
 from game.ui.highscore import show_highscores
 from game.ui.menu import Menu
 from game.ui.inputs import get_player_name  # ✅ Namenseingabe importieren
 from game.setting.database import init_db, save_or_update_score
 from game.modes.snake_game import SnakeGame
-from game.modes.classic import start_classic_mode
+from game.modes.classic import ClassicSnakeGame
 from game.modes.battle import BattleRoyale
 
 
@@ -19,6 +20,23 @@ from game.modes.battle import BattleRoyale
 
 im_menue = True  # Startet im Menü
 
+
+def start_classic_mode():
+    pygame.init()
+    screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
+    player_name = get_player_name(screen)  # 🆕 Holt den Namen mit der GUI
+
+    if player_name is None:  # Falls ESC gedrückt wurde
+        return  # ⏪ Zurück ins Menü
+
+    game = ClassicSnakeGame(player_name)  # 🆕 Erstellt das Spiel mit dem Namen
+    final_score = game.main_loop()  # 🎮 Startet das Spiel!
+
+    if final_score is not None:  # ✅ Falls Score existiert, speichern
+        save_or_update_score(player_name, final_score, mode="classic")
+
+
+    print(f"DEBUG: Classic Mode beendet. Endpunktzahl: {final_score}")  # Debugging
 
 def start_game(screen):
     """Startet das Spiel mit übergebenem `screen`."""
