@@ -2,13 +2,14 @@ import random
 
 import pygame
 import pygame.sndarray
-
+import sys
 from game.objects.apple import Apple
 from game.objects.mine import Mine
 from game.objects.obstacles import Obstacle
 from game.objects.snake import Snake
 from game.setting.playerinputs import handle_snake_input
 from game.setting.settings import Settings
+
 
 
 class ChaosMode:
@@ -33,6 +34,7 @@ class ChaosMode:
         self.__active_effects = {}  # 🎯 Hält alle aktiven Effekte & Endzeiten
         self.__event_timer = pygame.time.get_ticks() + random.randint(20000, 30000)
         self.__my_font = pygame.font.SysFont("monospace", 16)
+
 
     def trigger_random_event(self):
         """Löst ein zufälliges Ereignis aus und setzt Timer für die Deaktivierung"""
@@ -113,6 +115,8 @@ class ChaosMode:
             self.__update_screen()
             self.__clock.tick(15 if self.__speed_boost_active else 5 if self.__slow_motion_active else 10)
             self.__running = handle_snake_input(pygame.event.get(), self.__snake, battle_mode=False)
+            print(f"Snake Input Running: {self.__running}")  # 🐍 Debug-Log
+
             self.__obstacle.move()
             self.handle_events()
 
@@ -124,6 +128,10 @@ class ChaosMode:
                 self.__check_collisions()
                 self.__apple.move()
             self.__draw_objects()
+
+            if not self.__running:
+                final_score, back_to_menu, new_name = self.show_game_over_screen()
+                return final_score, back_to_menu, new_name
 
     def start_effect(self, effect_name, duration):
         """Startet einen Effekt und setzt einen Timer."""
@@ -179,6 +187,8 @@ class ChaosMode:
     def __check_collisions(self):
         """Prüft Kollisionen mit Hindernissen, Minen & Äpfeln"""
         head_pos = self.__snake.get_head_position()
+        print(f"Head Position: {head_pos}")
+        print(f"Obstacles: {self.__obstacle.get_positions()}")
 
         if head_pos in self.__obstacle.get_positions():
             print("[CHAOS] 💀 Hindernis getroffen! GAME OVER!")
@@ -221,6 +231,56 @@ class ChaosMode:
         # Falls die Ziel-Farbe fast erreicht wurde, eine neue Farbe wählen
         if all(abs(self.bg_color[i] - self.target_color[i]) < 5 for i in range(3)):
             self.target_color = [random.randint(50, 255) for _ in range(3)]
+
+
+    def show_game_over_screen(self):
+        """Zeigt den Game Over Bildschirm mit Animation & schönerem Design."""
+        font_large = pygame.font.SysFont("monospace", 50, bold=True)
+        font_small = pygame.font.SysFont("monospace", 25)
+
+        final_score = self.__snake.get_score()
+        blink = True  # Für blinkenden Text
+        blink_timer = 0  # Zeit für Blinken
+
+        while True:
+            self.__screen.fill((30, 30, 30))  # 🎨 Dunkelgrauer Hintergrund für einen besseren Look
+
+            # 🔴 Game Over Text
+            text1 = font_large.render("GAME OVER", True, (255, 50, 50))
+            self.__screen.blit(text1, (Settings.screen_width // 2 - text1.get_width() // 2, 100))
+
+            # 🏆 Score Anzeige
+            text2 = font_small.render(f"Score: {final_score}", True, (255, 255, 255))
+            self.__screen.blit(text2, (Settings.screen_width // 2 - text2.get_width() // 2, 170))
+
+            # ✨ Blinkender Hinweis (alle 500ms)
+            current_time = pygame.time.get_ticks()
+            if current_time - blink_timer > 500:  # Blinkt alle 500ms
+                blink = not blink
+                blink_timer = current_time
+
+            if blink:
+                text_blink = font_small.render("Drücke eine Taste", True, (255, 255, 100))
+                self.__screen.blit(text_blink, (Settings.screen_width // 2 - text_blink.get_width() // 2, 230))
+
+            # 🎮 Menüoptionen
+            text3 = font_small.render("Enter: Neustart | N: Neuer Name | M: Menü", True, (200, 200, 200))
+            self.__screen.blit(text3, (Settings.screen_width // 2 - text3.get_width() // 2, 300))
+
+            pygame.display.flip()
+
+            # 🕹️ Event Handling für Eingaben
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:  # Neustart
+                        return final_score, False, None
+                    elif event.key == pygame.K_n:  # Neuer Name wählen
+                        return final_score, False, "new_name"
+                    elif event.key == pygame.K_m:  # Zurück zum Menü
+                        return final_score, True, None
 
     def __update_screen(self):
         """Aktualisiert den Bildschirm mit dem Punktestand."""
