@@ -49,7 +49,31 @@ def start_game(screen):
 
         player_name = new_name  # ✅ Den neuen oder alten Namen für den nächsten Durchgang speichern
 
+def start_chaos_mode(screen):
+    """Startet den Chaos-Modus."""
+    player_name = get_player_name(screen)
+    if player_name is None:  # Falls ESC gedrückt wurde
+        return  # Zurück zum Menü
 
+    while True:
+        game = ChaosMode(player_name)
+        final_score, back_to_menu, new_name = game.main_loop()
+
+        if final_score is not None:
+            if new_name is None:
+                new_name = player_name
+
+            save_or_update_score(new_name, final_score, mode="chaos")  # ✅ Chaos-Score speichern
+
+        if back_to_menu:
+            break  # Zurück zum Menü
+
+        if new_name is None:
+            new_name = get_player_name(screen)
+            if new_name is None:
+                break
+
+        player_name = new_name
 
 def start_battle_royale_mode(screen):
     """Startet den Battle-Royale-Modus."""
@@ -78,9 +102,9 @@ def main():
         elif choice == 1:  # ✅ Classic Mode
             start_classic_mode()
         elif choice == 2:  # Battle Royale Mode
-            start_battle_royale_mode(screen)
+            start_chaos_mode(screen)
         elif choice == 3:  # ✅ Bestenliste
-            show_highscores(screen, mode="both")
+            show_highscores(screen)
         elif choice == 4:  # ✅ Beenden
             pygame.quit()
             break
