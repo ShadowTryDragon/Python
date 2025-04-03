@@ -113,7 +113,7 @@ def main():
 
     while True:
         menu.draw()
-        choice = menu.handle_keys()
+        choice = menu.handle_events()
 
         if choice == 0:  # ✅ Normaler Modus
             start_game(screen)
