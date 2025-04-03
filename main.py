@@ -24,7 +24,7 @@ im_menue = True  # Startet im Menü
 def start_classic_mode():
     pygame.init()
     screen = pygame.display.set_mode((Settings.screen_width, Settings.screen_height))
-    player_name = get_player_name(screen)  # 🆕 Holt den Namen mit der GUI
+    player_name = get_player_name(screen, "classic")  # 🆕 Holt den Namen mit der GUI
 
     if player_name is None:  # Falls ESC gedrückt wurde
         return  # ⏪ Zurück ins Menü
@@ -40,7 +40,7 @@ def start_classic_mode():
 
 def start_game(screen):
     """Startet das Spiel mit übergebenem `screen`."""
-    player_name = get_player_name(screen)  # ✅ `screen` direkt übergeben
+    player_name = get_player_name(screen, "normal")  # ✅ `screen` direkt übergeben
 
     if player_name is None:  # Falls ESC gedrückt wurde
         return  # ⏪ Zurück ins Menü
@@ -61,7 +61,7 @@ def start_game(screen):
 
         # 🎮 Falls Spieler "N" drückt, neuen Namen wählen
         if new_name is None:
-            new_name = get_player_name(screen)  # 🔄 Spieler gibt neuen Namen ein
+            new_name = get_player_name(screen, "normal")  # 🔄 Spieler gibt neuen Namen ein
             if new_name is None:  # Falls ESC gedrückt wurde, zurück ins Menü
                 break
 
@@ -69,7 +69,7 @@ def start_game(screen):
 
 def start_chaos_mode(screen):
     """Startet den Chaos-Modus."""
-    player_name = get_player_name(screen)
+    player_name = get_player_name(screen, "chaos")
     if player_name is None:  # Falls ESC gedrückt wurde
         return  # Zurück zum Menü
 
@@ -87,7 +87,7 @@ def start_chaos_mode(screen):
             break  # Zurück zum Menü
 
         if new_name is None:
-            new_name = get_player_name(screen)
+            new_name = get_player_name(screen, "chaos")
             if new_name is None:
                 break
 
