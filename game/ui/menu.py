@@ -1,11 +1,9 @@
 import os
-import random
 
 import pygame
-from pygame.math import lerp
+
 from game.setting.settings import Settings
 from game.ui.menuSnake import MenuSnake
-
 
 
 class Menu:
@@ -166,13 +164,14 @@ class Menu:
 
     def start_game_music(self, mode):
         """Startet die passende Musik mit sanftem Übergang."""
-        pygame.mixer.music.fadeout(1000)  # 🔉 Musik sanft ausblenden (1 Sekunde)
-        pygame.time.delay(1000)  # Warte kurz für sanften Wechsel
+        pygame.mixer.music.fadeout(500)  # 🔉 Schnellere Fadeout-Zeit (0,5 Sekunden)
 
         if mode in [0, 1]:  # Start Game oder Classic Mode
-            self.play_music("game/audio/game_music.mp3")
+            pygame.mixer.music.load("game/audio/game_music.mp3")
         elif mode == 2:  # Chaos Mode
-            self.play_music("game/audio/chaos_music.mp3")
+            pygame.mixer.music.load("game/audio/chaos_music.mp3")
+
+        pygame.mixer.music.play(-1)  # 🎵 Neue Musik sofort starten
 
     def handle_events(self):
         """Verarbeitet Tasteneingaben und Maus-Interaktionen im Menü."""
@@ -185,14 +184,16 @@ class Menu:
 
             elif event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_DOWN, pygame.K_s]:  # 🔽 Nach unten
+                    self.select_sound.play(maxtime=500)  # 🎵 Sound abspielen
                     self.selected = (self.selected + 1) % len(self.options)
-                    self.select_sound.play()  # 🎵 Sound abspielen
+
                 elif event.key in [pygame.K_UP, pygame.K_w]:  # 🔼 Nach oben
+                    self.select_sound.play(maxtime=500)  # 🎵 Sound abspielen
                     self.selected = (self.selected - 1) % len(self.options)
-                    self.select_sound.play()  # 🎵 Sound abspielen
+
                 elif event.key == pygame.K_RETURN:  # ✅ Auswahl bestätigen
                     if self.selected in [0, 1, 2]:  # Wenn Spielmodus gewählt
-                        self.confirm_sound.play()  # 🎵 Bestätigungston
+                        self.confirm_sound.play(maxtime=100)  # 🎵 Bestätigungston
                         self.start_game_music(self.selected)
                     return self.selected
 
