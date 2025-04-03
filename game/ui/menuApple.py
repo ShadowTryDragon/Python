@@ -14,8 +14,13 @@ class MenuApple:
         self.image = pygame.transform.scale(self.image, (apple_size, apple_size))
 
     def relocate(self):
-        """Setzt den Apfel an eine neue zufällige Position auf dem Pfad."""
-        self.position = random.choice(self.path)  # Neuer zufälliger Punkt
+        """Setzt den Apfel an eine neue zufällige Position auf dem Pfad, aber nicht auf der aktuellen Stelle."""
+        new_position = self.position  # Start mit der alten Position
+
+        while new_position == self.position:  # Solange die neue Position gleich ist
+            new_position = random.choice(self.path)  # Neue Position wählen
+
+        self.position = new_position  # Aktualisiere die Position
         print(f"[DEBUG] Apfel neu gespawnt bei {self.position}")
 
     def draw(self, screen):
