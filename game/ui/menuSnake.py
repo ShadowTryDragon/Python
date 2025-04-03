@@ -7,10 +7,10 @@ from game.ui.menuApple import MenuApple
 class MenuSnake:
     def __init__(self,path):
         """Erstellt eine animierte Schlange, die sich langsam um die Menü-Optionen schlängelt."""
-        self.length = 150 # Länge der Schlange
+        self.length = 15 # Länge der Schlange
         self.positions = [(Settings.screen_width // 2 - 220 + i * 20, 160) for i in range(self.length)]
         self.direction = (1, 0)  # Startbewegung nach rechts
-        self.speed = 5  # Langsame Bewegung
+        self.speed = 10  # Langsame Bewegung
         self.move_delay = 5  # 🔄 Die Schlange bewegt sich nur alle X Frames
         self.move_counter = 0  # Zählt Frames, um Bewegung zu steuern
         self.color = (0, 255, 0)  # Schlange ist grün
